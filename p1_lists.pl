@@ -350,3 +350,48 @@ splits([X|Xs], [X|I], T) :- splits(Xs, I, T).
 
 group(_, [], []).
 group(L, [N|Ns], [G|R]) :- combination_partition(N, L, G, R1), group(R1, Ns, R).
+
+
+% 1.28 (**) Sorting a list of lists according to length of sublists.
+% a) Suppose that a list contains elements that are lists themselves. The
+%    objective is to sort the elements of InList according to their length.
+%
+%    Example:
+%    ?- lsort([[a,b,c],[d,e],[f,g,h],[d,e],[i,j,k,l],[m,n],[o]],L).
+%    L = [[o], [d, e], [d, e], [m, n], [a, b, c], [f, g, h], [i, j, k, l]]
+
+lsort(I, O) :-
+  map_list_to_pairs(length, I, L), keysort(L, S), pairs_values(S, O).
+
+map_list_to_pairs(_, [], []).
+map_list_to_pairs(Pred, [X|Xs], [K-X|T]) :-
+  call(Pred, X, K), map_list_to_pairs(Pred, Xs, T).
+
+pairs_values([], []).
+pairs_values([_-V|Ps], [V|Vs]) :- pairs_values(Ps, Vs).
+
+
+% b) This time, sort the list by their length frequency, i.e. lists with rare
+%    lengths are placed first, others with a more frequent length come later.
+%
+%    Example:
+%    ?- lfsort([[a,b,c],[d,e],[f,g,h],[d,e],[i,j,k,l],[m,n],[o]],L).
+%    L = [[i, j, k, l], [o], [a, b, c], [f, g, h], [d, e], [d, e], [m, n]]
+
+lfsort(I, O) :-
+  map_list_to_pairs(length, I, KeyedByLength),
+  keysort(KeyedByLength, SortedByLength),
+  key_pack(SortedByLength, GroupedByLength),
+  pairs_values(GroupedByLength, Gs),
+  map_list_to_pairs(length, Gs, KeyedByGroupLength),
+  keysort(KeyedByGroupLength, SortedByGroupLength),
+  pairs_values(SortedByGroupLength, Ls),
+  list_concat(Ls, O).
+
+key_pack([], []).
+key_pack([K-V], [K-[V]]).
+key_pack([K-V|Ps], [K-[V|Vs]|T]) :- key_pack(Ps, [K-Vs|T]).
+key_pack([K1-V|Ps], [K1-[V],K2-Vs|T]) :- key_pack(Ps, [K2-Vs|T]), K1 \= K2.
+
+list_concat([], []).
+list_concat([L|Ls], R) :- is_list(L), list_concat(Ls, Ls_), append(L, Ls_, R).
