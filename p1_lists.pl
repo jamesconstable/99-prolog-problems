@@ -249,3 +249,66 @@ remove_at(X, L, N, R) :- N_ is N-1, split(L, N_, S, [X|E]), append(S, E, R).
 % L = [a,alfa,b,c,d]
 
 insert_at(X, L, N, R) :- N_ is N-1, split(L, N_, L1, L2), append(L1, [X|L2], R).
+
+
+% 1.22 (*) Create a list containing all integers within a given range.
+
+% Example:
+% ?- range(4, 9, L).
+% L = [4, 5, 6, 7, 8, 9]
+
+range(N, N, [N]).
+range(A, B, [A|R]) :- A \= B, A_ is A + sign(B-A), range(A_, B, R).
+
+
+% 1.23 (**) Extract a given number of randomly selected elements from a list.
+
+% Example:
+% ?- rnd_select([a,b,c,d,e,f,g,h],3,L).
+% L = [e,d,a]
+
+rnd_select(_, 0, []).
+rnd_select(L, N, [X|R]) :-
+  length(L, M),
+  0 < N, N =< M,
+  M_ is M+1,
+  random(1, M_, I),
+  remove_at(X, L, I, L_),
+  N_ is N-1,
+  rnd_select(L_, N_, R).
+
+
+% 1.24 (*) Lotto: Draw N different random numbers from the set 1..M
+
+% Example:
+% ?- lotto(6,49,L).
+% L = [23,1,17,33,21,37]
+
+lotto(N, M, L) :- range(1, M, P), rnd_select(P, N, L).
+
+
+% 1.25 (*) Generate a random permutation of the elements of a list.
+
+% Example:
+% ?- rnd_permu([a,b,c,d,e,f],L).
+% L = [b,a,d,c,e,f]
+
+rnd_permu(L, R) :- length(L, N), rnd_select(L, N, R).
+
+
+% 1.26 (**) Generate the combinations of K distinct objects chosen from the N
+% elements of a list.
+
+% Example:
+% ?- combination(3,[a,b,c,d,e,f],L).
+% L = [a,b,c] ;
+% L = [a,b,d] ;
+% L = [a,b,e] ;
+% ...
+
+combination(0, _, []).
+combination(N, X, [H|R]) :-
+  0 < N, tails(X, [H|T]), N_ is N-1, combination(N_, T, R).
+
+tails(X, X).
+tails([_|Xs], T) :- tails(Xs, T).
