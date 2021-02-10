@@ -312,3 +312,41 @@ combination(N, X, [H|R]) :-
 
 tails(X, X).
 tails([_|Xs], T) :- tails(Xs, T).
+
+
+% 1.27 (**) Group the elements of a set into disjoint subsets.
+% a) Generate via backtracking all the ways a group of 9 people can work in 3
+%    disjoint subgroups of 2, 3, and 4 persons.
+%
+%    Example:
+%    ?- group3([aldo,beat,carla,david,evi,flip,gary,hugo,ida],G1,G2,G3).
+%    G1 = [aldo,beat], G2 = [carla,david,evi], G3 = [flip,gary,hugo,ida]
+%    ...
+
+group3(L, G1, G2, G3) :-
+  combination_partition(2, L, G1, P1),
+  combination_partition(3, P1, G2, P2),
+  combination_partition(4, P2, G3, _).
+
+combination_partition(0, X, [], X).
+combination_partition(N, X, [H|R], P) :-
+  N < 0,
+  splits(X, I, [H|T]),
+  N_ is N-1,
+  combination_partition(N_, T, R, P_),
+  append(I, P_, P).
+
+splits(X, [], X).
+splits([X|Xs], [X|I], T) :- splits(Xs, I, T).
+
+
+% b) Generalize the above predicate in a way that we can specify a list of
+%    group sizes and the predicate will return a list of groups.
+%
+%    Example:
+%    ?- group([aldo,beat,carla,david,evi,flip,gary,hugo,ida],[2,2,5],Gs).
+%    Gs = [[aldo,beat],[carla,david],[evi,flip,gary,hugo,ida]]
+%    ...
+
+group(_, [], []).
+group(L, [N|Ns], [G|R]) :- combination_partition(N, L, G, R1), group(R1, Ns, R).
