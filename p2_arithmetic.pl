@@ -60,3 +60,27 @@ primes_in_range(L, U, RPs) :- range(2, U, R), prime_sieve(R, Ps),
 
 drop_while_less_than(N, [X|Xs], T) :- X < N, !, drop_while_less_than(N, Xs, T).
 drop_while_less_than(_, Xs, Xs).
+
+
+% 2.05 (**) Goldbach's conjecture.
+% Goldbach's conjecture says that every positive even number greater than 2 is
+% the sum of two prime numbers. It is one of the most famous facts in number
+% theory that has not been proven to be correct in the general case, but has
+% been numerically confirmed up to very large numbers (much larger than is
+% possible in Prolog). Write a predicate to find the two prime numbers that sum
+% to a given even number.
+
+% Example:
+% ?- goldbach(28, L).
+% L = [5, 23]
+
+goldbach(N, [A, B]) :-
+  integer(N), N > 2, N mod 2 =:= 0,
+  HalfN is N / 2,
+  primes_in_range(2, HalfN, Ps),
+  member(A, Ps),
+  B is N - A,
+  is_prime(B).
+
+member(X, [X|_]).
+member(X, [_|Xs]) :- member(X, Xs).
