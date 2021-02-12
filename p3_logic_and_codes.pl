@@ -39,5 +39,27 @@ table(_, _, _).
 bind(true).
 bind(false).
 
-write_row(A, B, P) :- P,   writef("%t\t%t\t%t", [A, B, true]), nl.
-write_row(A, B, P) :- \+P, writef("%t\t%t\t%t", [A, B, false]), nl.
+write_row(A, B, P) :- P, !, writef("%t\t%t\t%t", [A, B, true]), nl.
+write_row(A, B, P) :- \+ P, writef("%t\t%t\t%t", [A, B, false]), nl.
+
+
+% 3.02 (*) Truth tables for logical expressions (2).
+% Continue problem 3.01 by defining and/2, or/2, etc as being operators. This
+% allows to write the logical expression in the more natural way, as in the
+% example: A and (A or not B). Define operator precedence as usual.
+
+% Example:
+% ?- table(A, B, A and (A or not B)).
+% true  true  true
+% true  false true
+% false true  false
+% false false false
+
+:- op(900,  fy, not).
+:- op(920, yfx, and).
+:- op(940, yfx, or).
+:- op(920, yfx, nand).
+:- op(940, yfx, nor).
+:- op(960, yfx, xor).
+:- op(960, yfx, impl).
+:- op(960, yfx, equ).
