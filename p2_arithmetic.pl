@@ -17,23 +17,16 @@ has_factor(N, K) :- K * K =< N, K_ is K + 1, has_factor(N, K_).
 % ?- prime_factors(315, L).
 % L = [3, 3, 5, 7]
 
-prime_factors(N, Fs) :-
-  N > 1, range(2, N, R), prime_sieve(R, Ps), prime_factors(N, Ps, Fs).
+prime_factors(N, Fs) :- N > 1, prime_factors(N, 2, Fs).
 
-prime_factors(_, [], []).
 prime_factors(1, _, []) :- !.
-prime_factors(N, [P|Ps], Fs) :- N mod P =\= 0, !, prime_factors(N, Ps, Fs).
-prime_factors(N, [P|Ps], [P|Fs]) :- N2 is N / P, prime_factors(N2, [P|Ps], Fs).
+prime_factors(N, P, Fs) :-
+  P =< N, N mod P =\= 0, !, next_prime(P, P_), prime_factors(N, P_, Fs).
+prime_factors(N, P, [P|Fs]) :-
+  P =< N, N_ is N / P, prime_factors(N_, P, Fs).
 
-prime_sieve([], []).
-prime_sieve([N|Ns], [N|Ps]) :- filter_multiples(N, Ns, R), prime_sieve(R, Ps).
-
-filter_multiples(_, [], []).
-filter_multiples(N, [X|Xs], T) :- X mod N =:= 0, !, filter_multiples(N, Xs, T).
-filter_multiples(N, [X|Xs], [X|T]) :- filter_multiples(N, Xs, T).
-
-range(N, N, [N]).
-range(A, B, [A|R]) :- A \= B, A_ is A + sign(B-A), range(A_, B, R).
+next_prime(P, P_) :- P_ is P + 1, is_prime(P_), !.
+next_prime(P, N) :- P_ is P + 1, next_prime(P_, N).
 
 
 % 2.03 (**) Determine the prime factors of a given positive integer (2).
@@ -57,6 +50,9 @@ group_count([X|Xs], [[X, 1], [Y, N]|E]) :- group_count(Xs, [[Y, N]|E]), X \= Y.
 
 primes_in_range(L, U, RPs) :- range(2, U, R), prime_sieve(R, Ps),
   drop_while_less_than(L, Ps, RPs).
+
+range(N, N, [N]).
+range(A, B, [A|R]) :- A \= B, A_ is A + sign(B-A), range(A_, B, R).
 
 drop_while_less_than(N, [X|Xs], T) :- X < N, !, drop_while_less_than(N, Xs, T).
 drop_while_less_than(_, Xs, Xs).
@@ -152,3 +148,63 @@ gcd(N1, N2, D) :- N2 > 0, R is N1 mod N2, gcd(N2, R, D).
 % true
 
 coprime(A, B) :- gcd(A, B, 1).
+
+
+% 2.09 (**) Calculate Euler's totient function phi(m).
+% Euler's so-called totient function phi(m) is defined as the number of positive
+% integers r (1 <= r < m) that are coprime to m.
+% E.g. m = 10, r = 1,3,7,9; thus phi(m) = 4. Note the special case: phi(1) = 1.
+%
+% Find out what the value of phi(m) is if m is a prime number. Euler's totient
+% function plays an important role in one of the most widely used public key
+% cryptography methods (RSA). In this exercise, use the most primitive method to
+% calculate this function. There is a smarter way that we shall use in 2.10.
+
+% Example:
+% ?- Phi is totient_phi(10).
+% Phi = 4
+
+totient_phi(N, R) :- totient_phi(1, N, R).
+
+totient_phi(_, 1, 1) :- !.
+totient_phi(U, U, 0) :- !.
+totient_phi(L, U, R) :-
+  L < U, coprime(L, U), !, L_ is L + 1, totient_phi(L_, U, R_), R is R_ + 1.
+totient_phi(L, U, R) :- L < U, L_ is L + 1, totient_phi(L_, U, R).
+
+:- arithmetic_function(totient_phi/1).
+
+
+% 2.10 (**) Calculate Euler's totient function phi(m) (2).
+% See problem 2.09 for the definition of Euler's totient function. If the list
+% of the prime factors of a number m is known in the form of problem 2.03 then
+% the function phi(m) can be efficiently calculated as follows: Let [[p1, m1],
+% [p2, m2], [p3, m3], ...] be the list of prime factors (and their
+% multiplicities) of a given number m. Then phi(m) can be calculated with the
+% following formula:
+% phi(m) = (p1 - 1) * p1**(m1 - 1)
+%        * (p2 - 1) * p2**(m2 - 1)
+%        * (p3 - 1) * p3**(m3 - 1)
+%        * ...
+
+totient_phi_2(1, 1) :- !.
+totient_phi_2(N, Phi) :- prime_factors_mult(N, PMs), calc_phi(PMs, Phi).
+
+calc_phi([], 1).
+calc_phi([[P, M]|PMs], R) :- calc_phi(PMs, S), R is (P - 1) * P**(M - 1) * S.
+
+:- arithmetic_function(totient_phi_2/1).
+
+
+% 2.11 (*) Compare the two methods of calculating Euler's totient function.
+% Use the solutions of problems 2.09 and 2.10 to compare the algorithms. Take
+% the number of logical inferences as a measure for efficiency. Try to calculate
+% phi(10090) as an example.
+
+totient_phi_test(N) :-
+  writef('Testing totient_phi(%t, Phi):', [N]),
+  time(totient_phi(N, Phi)),
+  writef('Phi = %t', [Phi]), nl, nl,
+  writef('Testing totient_phi_2(%t, Phi):', [N]),
+  time(totient_phi_2(N, Phi2)),
+  writef('Phi = %t', [Phi2]), nl.
