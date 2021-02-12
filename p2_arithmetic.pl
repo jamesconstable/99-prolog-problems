@@ -101,6 +101,7 @@ member(X, [_|Xs]) :- member(X, Xs).
 
 goldbach_list(L, U) :- goldbach_list(L, U, 0).
 
+
 % b) In most cases, if an even number is written as the sum of two prime
 %    numbers, one of them is very small. Very rarely, the primes are both
 %    bigger than say 50. Try to find out how many such cases there are in the
@@ -125,3 +126,29 @@ goldbach_list(L, U, PL) :-
 goldbach_write(X, P1, P2, L) :- P1 > L, writef('%t = %t + %t', [X, P1, P2]), nl.
 goldbach_write(_, _, _, _).
 
+
+% 2.07 (**) Determine the greatest common divisor of two positive integer
+% numbers. Use Euclid's algorithm.
+
+% Example:
+% ?- gcd(36, 63, G).
+% G = 9
+
+% Define gcd as an arithmetic function, so you can use it like this:
+% ?- G is gcd(36, 63).
+% G = 9
+
+gcd(N1, 0, N1).
+gcd(N1, N2, D) :- N2 > 0, R is N1 mod N2, gcd(N2, R, D).
+
+:- arithmetic_function(gcd/2).
+
+
+% 2.08 (*) Determine whether two positive integer numbers are coprime.
+% Two numbers are coprime if their greatest common divisor equals 1.
+
+% Example:
+% ?- coprime(35, 64).
+% true
+
+coprime(A, B) :- gcd(A, B, 1).
