@@ -138,48 +138,35 @@ prepend_all(S, [X|Xs], [Y|Ys]) :- atom_concat(S, X, Y), prepend_all(S, Xs, Ys).
 % huffman(Fs, Hs) :- Hs is the Huffman code table for the frequency table Fs
 
 huffman([], []).
-huffman([fr(H, _)], H) :- is_list(H).
-huffman([fr(S, _)], [hc(S, '0')]) :- \+ is_list(S).
+huffman([fr(H, _)], H) :- is_list(H), !.
+huffman([fr(S, _)], [hc(S, '0')]).
+huffman([fr(S, _)], [hc(S, '1')]).
 huffman(Fs, Hs) :-
-  min(Fs, A, Fs1),
-  min(Fs1, B, Fs2),
+  select_min(Fs, A, Fs1),
+  select_min(Fs1, B, Fs2),
   combine(A, B, C),
   huffman([C|Fs2], Hs).
 
-min([A], A, []).
-min([SF|SFs], SF, [M|R]) :-
-  min(SFs, M, R),
-  SF = fr(_, F),
-  M = fr(_, Fm),
-  F =< Fm.
-min([SF|SFs], M, [SF|R]) :-
-  min(SFs, M, R),
-  SF = fr(_, F),
-  M = fr(_, Fm),
-  F > Fm.
+min_weight([fr(_, F)], F).
+min_weight([fr(_, F)|SFs], F) :- min_weight(SFs, M), F < M, !.
+min_weight([_|SFs], M) :- min_weight(SFs, M).
 
-combine(fr(Sa, Fa), fr(Sb, Fb), fr([hc(Sa, '0'), hc(Sb, '1')], Fc)) :-
-  \+ is_list(Sa),
-  \+ is_list(Sb),
-  Fc is Fa + Fb.
-combine(fr(Sa, Fa), fr(Sb, Fb), fr([hc(Sa, '0')|HCs], Fc)) :-
-  \+ is_list(Sa),
-  is_list(Sb),
-  prepend_all_codes('1', Sb, HCs),
-  Fc is Fa + Fb.
-combine(fr(Sa, Fa), fr(Sb, Fb), fr([hc(Sb, '0')|HCs], Fc)) :-
-  is_list(Sa),
-  \+ is_list(Sb),
-  prepend_all_codes('1', Sa, HCs),
-  Fc is Fa + Fb.
-combine(fr(Sa, Fa), fr(Sb, Fb), fr(HCs, Fc)) :-
-  is_list(Sa),
-  is_list(Sb),
+select_by_weight(W, [fr(S, W)|R], fr(S, W), R).
+select_by_weight(W, [fr(S, X)|SFs], I, [fr(S, X)|R]) :-
+  select_by_weight(W, SFs, I, R).
+
+select_min(L, M, R) :- min_weight(L, W), select_by_weight(W, L, M, R).
+
+combine(A, B, C) :- combine_(A, B, C).
+combine(A, B, C) :- combine_(B, A, C).
+
+combine_(fr(Sa, Fa), fr(Sb, Fb), fr(HCs, Fc)) :-
   prepend_all_codes('0', Sa, HCs1),
   prepend_all_codes('1', Sb, HCs2),
   append(HCs1, HCs2, HCs),
   Fc is Fa + Fb.
 
+prepend_all_codes(P, S, [hc(S, P)]) :- \+ is_list(S).
 prepend_all_codes(_, [], []).
 prepend_all_codes(P, [hc(S, C)|Xs], [hc(S, C_)|Ys]) :-
   atom_concat(P, C, C_), prepend_all_codes(P, Xs, Ys).
