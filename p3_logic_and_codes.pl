@@ -33,14 +33,14 @@ impl(A, B) :- or(not(A), B).
 
 equ(A, B) :- not(xor(A, B)).
 
-table(A, B, Pred) :- bind(A), bind(B), write_row(A, B, Pred), fail.
+table(A, B, Expr) :- bind(A), bind(B), write_row(A, B, Expr), fail.
 table(_, _, _).
 
 bind(true).
 bind(false).
 
-write_row(A, B, P) :- P, !, writef("%t\t%t\t%t", [A, B, true]), nl.
-write_row(A, B, P) :- \+ P, writef("%t\t%t\t%t", [A, B, false]), nl.
+write_row(A, B, E) :- E, !, writef("%t\t%t\t%t", [A, B, true]), nl.
+write_row(A, B, _) :- writef("%t\t%t\t%t", [A, B, false]), nl.
 
 
 % 3.02 (*) Truth tables for logical expressions (2).
@@ -63,3 +63,61 @@ write_row(A, B, P) :- \+ P, writef("%t\t%t\t%t", [A, B, false]), nl.
 :- op(960, yfx, xor).
 :- op(960, yfx, impl).
 :- op(960, yfx, equ).
+
+
+% 3.03 (**) Truth tables for logical expressions (3).
+% Generalize problem 3.02 in such a way that the logical expression may contain
+% any number of logical variables. Define table/2 in a way that
+% table(List, Expr) prints the truth table for the expression Expr, which
+% contains the logical variables enumerated in List.
+
+% Example:
+% ?- table2([A,B,C], A and (B or C) equ A and B or A and C).
+% true  true  true  true
+% true  true  false true
+% true  false true  true
+% true  false false true
+% false true  true  true
+% false true  false true
+% false false true  true
+% false false false true
+
+table2(Vs, Expr) :- bind_vars(Vs), write_row2(Vs, Expr), fail.
+table2(_, _).
+
+bind_vars([]).
+bind_vars([V|Vs]) :- bind(V), bind_vars(Vs).
+
+write_row2([], E) :- E, !, write(' true'), nl.
+write_row2([], _) :- write(' false'), nl.
+write_row2([V|Vs], E) :- write(V), write('\t'), write_row2(Vs, E).
+
+
+% 3.04 (**) Gray code.
+% An n-bit Gray code is a sequence of n-bit strings constructed according to
+% certain rules. For example,
+% n = 1: C(1) = ['0','1'].
+% n = 2: C(2) = ['00','01','11','10'].
+% n = 3: C(3) = ['000','001','011','010','110','111','101','100'].
+
+% Find out the construction rules and write a predicate with the following
+% specification:
+% gray(N,C) :- C is the N-bit Gray code
+
+% Can you apply the method of "result caching" in order to make the predicate
+% more efficient, when it is to be used repeatedly?
+
+:- table gray/2.
+
+gray(1, ['0', '1']).
+gray(N, C) :-
+  N > 1,
+  N_ is N - 1,
+  gray(N_, C_),
+  reverse(C_, Cr),
+  prepend_all('0', C_, P1),
+  prepend_all('1', Cr, P2),
+  append(P1, P2, C).
+
+prepend_all(_, [], []).
+prepend_all(S, [X|Xs], [Y|Ys]) :- atom_concat(S, X, Y), prepend_all(S, Xs, Ys).
