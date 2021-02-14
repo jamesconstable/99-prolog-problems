@@ -100,3 +100,29 @@ sym_cbal_trees(_, []).
 sym_cbal_tree(N, T) :- cbal_tree(N, T), symmetric(T).
 
 sym_cbal_trees_count(Nodes, N) :- sym_cbal_trees(Nodes, Ts), length(Ts, N).
+
+
+% 4.06 (**) Construct height-balanced binary trees.
+% In a height-balanced binary tree, the following property holds for every node:
+% The height of its left subtree and the height of its right subtree are almost
+% equal, which means their difference is not greater than one.
+
+% Write a predicate hbal_tree/2 to construct height-balanced binary trees for a
+% given height. The predicate should generate all solutions via backtracking.
+% Put the letter 'x' as information into all nodes of the tree.
+
+% Example:
+% ?- hbal_tree(3,T).
+% T = t(x, t(x, t(x, nil, nil), t(x, nil, nil)), t(x, t(x, nil, nil),
+%   t(x, nil, nil))) ;
+% T = t(x, t(x, t(x, nil, nil), t(x, nil, nil)), t(x, t(x, nil, nil), nil)) ;
+% ...
+% No
+
+hbal_tree(0, nil).
+hbal_tree(N, t(x, L, R)) :-
+  N > 0, N1 is N-1, hbal_tree(N1, L), hbal_tree(N1, R).
+hbal_tree(N, t(x, L, R)) :-
+  N > 1, N1 is N-1, N2 is N-2, hbal_tree(N1, L), hbal_tree(N2, R).
+hbal_tree(N, t(x, L, R)) :-
+  N > 1, N1 is N-1, N2 is N-2, hbal_tree(N2, L), hbal_tree(N1, R).
