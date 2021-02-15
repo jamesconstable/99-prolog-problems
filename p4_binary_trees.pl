@@ -120,9 +120,60 @@ sym_cbal_trees_count(Nodes, N) :- sym_cbal_trees(Nodes, Ts), length(Ts, N).
 % No
 
 hbal_tree(0, nil).
-hbal_tree(N, t(x, L, R)) :-
-  N > 0, N1 is N-1, hbal_tree(N1, L), hbal_tree(N1, R).
-hbal_tree(N, t(x, L, R)) :-
-  N > 1, N1 is N-1, N2 is N-2, hbal_tree(N1, L), hbal_tree(N2, R).
-hbal_tree(N, t(x, L, R)) :-
-  N > 1, N1 is N-1, N2 is N-2, hbal_tree(N2, L), hbal_tree(N1, R).
+hbal_tree(H, t(x, L, R)) :-
+  H > 0, H1 is H-1, hbal_tree(H1, L), hbal_tree(H1, R).
+hbal_tree(H, t(x, L, R)) :-
+  H > 1, H1 is H-1, H2 is H-2, hbal_tree(H1, L), hbal_tree(H2, R).
+hbal_tree(H, t(x, L, R)) :-
+  H > 1, H1 is H-1, H2 is H-2, hbal_tree(H2, L), hbal_tree(H1, R).
+
+
+% 4.07 (**) Construct height-balanced binary trees with a given number of nodes.
+% a) Consider a height-balanced binary tree of height H. What is the maximum
+%    number of nodes it can contain? Clearly, MaxN = 2**H - 1. However, what is
+%    the minimum number MinN? This question is more difficult. Try to find a
+%    recursive statement and turn it into a predicate minNodes/2 defined as
+%    follows:
+%    minNodes(H, N) :- N is the minimum number of nodes in a height-balanced
+%    binary tree of height H. (integer, integer), (+, ?)
+
+:- table(minNodes/2).
+minNodes(0, 0).
+minNodes(1, 1).
+minNodes(H, N) :-
+  H > 1, H1 is H-1, H2 is H-2, minNodes(H1, N1), minNodes(H2, N2), N is N1+N2+1.
+
+% b) On the other hand, we might ask: what is the maximum height H a
+%    height-balanced binary tree with N nodes can have?
+%    maxHeight(N, H) :- H is the maximum height of a height-balanced binary tree
+%    with N nodes. (integer, integer), (+, ?)
+
+maxHeight(N, H) :- maxHeight(N, H, 0).
+
+maxHeight(N, H, HCurr) :-
+  minNodes(HCurr, M), M =< N, HCurr_ is HCurr+1, maxHeight(N, H, HCurr_).
+maxHeight(N, H, HCurr) :-
+  minNodes(HCurr, M), M > N, H is HCurr-1.
+
+% c) Now, we can attack the main problem: construct all the height-balanced
+%    binary trees with a given nuber of nodes. Find out how many height-balanced
+%    trees exist for N = 15.
+%    hbal_tree_nodes(N, T) :- T is a height-balanced binary tree with N nodes.
+
+hbal_tree_nodes(N, T) :-
+  minHeight(N, HMin),
+  maxHeight(N, HMax),
+  between(HMin, HMax, H),
+  hbal_tree(H, T),
+  count_nodes(T, N).
+
+count_nodes(nil, 0).
+count_nodes(t(_, L, R), N) :-
+  count_nodes(L, Nl), count_nodes(R, Nr), N is 1+Nl+Nr.
+
+log2(X, R) :- R is log(X) / log(2).
+:- arithmetic_function(log2/1).
+
+minHeight(N, H) :- H is 1 + floor(log2(N)).
+
+count_hbal_trees(N, R) :- setof(T, hbal_tree_nodes(N, T), Ts), length(Ts, R).
