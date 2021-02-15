@@ -229,3 +229,68 @@ atlevel(nil, _, []).
 atlevel(t(X, _, _), 1, [X]) :- !.
 atlevel(t(_, L, R), N, S) :-
   N_ is N-1, atlevel(L, N_, Sl), atlevel(R, N_, Sr), append(Sl, Sr, S).
+
+
+% 4.12 (**) Construct a complete binary tree.
+% A complete binary tree with height H is defined as follows: The levels
+% 1, 2, 3, ..., H-1 contain the maximum number of nodes (i.e 2**(i-1) at the
+% level i; note that we start counting the levels from 1 at the root). In level
+% H, which may contain less than the maximum possible number of nodes, all the
+% nodes are "left-adjusted". This means that in a levelorder tree traversal all
+% internal nodes come first, the leaves come second, and empty successors (the
+% nil's which are not really nodes!) come last.
+
+% Particularly, complete binary trees are used as data structures (or addressing
+% schemes) for heaps.
+
+% We can assign an address number to each node in a complete binary tree by
+% enumerating the nodes in levelorder, starting at the root with number 1. In
+% doing so, we realize that for every node X with address A the following
+% property holds: The address of X's left and right successors are 2*A and
+% 2*A+1, respectively, supposed the successors do exist. This fact can be used
+% to elegantly construct a complete binary tree structure. Write a predicate
+% complete_binary_tree/2 with the following specification:
+
+% complete_binary_tree(N,T) :- T is a complete binary tree with N nodes. (+,?)
+
+complete_binary_tree(N, T) :- complete_binary_tree(N, T, 1).
+
+complete_binary_tree(N, t(x, L, R), C) :-
+  C =< N,
+  complete_binary_tree(N, L, 2*C),
+  complete_binary_tree(N, R, 2*C+1).
+complete_binary_tree(N, nil, C) :- C > N.
+
+
+% 4.13 (**) Layout a binary tree (1).
+% Given a binary tree as the usual Prolog term t(X,L,R) (or nil). As a
+% preparation for drawing the tree, a layout algorithm is required to determine
+% the position of each node in a rectangular grid. Several layout methods are
+% conceivable, one of them is shown in the illustration at:
+% https://sites.google.com/site/prologsite/_/rsrc/1264933989828/prolog-problems/4/p64.gif.
+
+% In this layout strategy, the position of a node v is obtained by the following
+% two rules:
+%  * x(v) is equal to the positioni of the node v in the inorder
+%  * y(v) is equal to the depth of the node v in the tree sequence
+
+% In order to store the position of the nodes, we extend the Prolog term
+% representing a node (and its successors) as follows:
+%  * nil represents the empty tree (as usual)
+%  * t(W, X, Y, L R) represents a (non-empty) binary tree with root W
+%    "positioned" at (X, Y) and subtrees L and R.
+
+% Write a predicate layout_binary_tree/2 with the following specification:
+% layout_binary_tree(T, PT) :- PT is the "positioned" binary tree obtained from
+% the binary tree T. (+, ?)
+
+layout_binary_tree(T, PT) :- layout_binary_tree(T, PT, 1, _, 1).
+
+layout_binary_tree(nil, nil, _, I, I).
+layout_binary_tree(t(W, nil, nil), t(W, X_in, Y, nil, nil), X_in, X_out, Y) :-
+  X_out is X_in + 1, !.
+layout_binary_tree(t(W, L, R), t(W, X_root, Y, PL, PR), X_in, X_out, Y) :-
+  Y1 is Y+1,
+  layout_binary_tree(L, PL, X_in, X_root, Y1),
+  X_after_root is X_root + 1,
+  layout_binary_tree(R, PR, X_after_root, X_out, Y1).
