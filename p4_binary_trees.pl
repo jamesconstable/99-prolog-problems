@@ -294,3 +294,34 @@ layout_binary_tree(t(W, L, R), t(W, X_root, Y, PL, PR), X_in, X_out, Y) :-
   layout_binary_tree(L, PL, X_in, X_root, Y1),
   X_after_root is X_root + 1,
   layout_binary_tree(R, PR, X_after_root, X_out, Y1).
+
+
+% 4.14 (**) Layout a binary tree (2).
+% An alternative layout method is depicted in the illlustration at:
+% https://sites.google.com/site/prologsite/_/rsrc/1264934255598/prolog-problems/4/p65.gif
+
+% Find out the rules and write the corresponding Prolog predicate. Hint: on a
+% given level, the horizontal distance between neighbouring nodes is constant.
+
+layout_binary_tree2(T, PT) :-
+  height(T, H),
+  leftmost_depth(T, LD),
+  Xoffset is 2**(H-LD) - 1,
+  X is 2**(H-1) - Xoffset,
+  layout_binary_tree2(T, PT, X, 1, H).
+
+height(nil, 0).
+height(t(_, nil, nil), 1) :- !.
+height(t(_, L, R), H) :- height(L, HL), height(R, HR), H is max(HL, HR) + 1.
+
+leftmost_depth(nil, 0) :- !.
+leftmost_depth(t(_, L, _), N) :- leftmost_depth(L, N_), N is N_+1.
+
+layout_binary_tree2(nil, nil, _, _, _).
+layout_binary_tree2(t(W, nil, nil), t(W, X, Y, nil, nil), X, Y, _) :- !.
+layout_binary_tree2(t(W, L, R), t(W, X, Y, PL, PR), X, Y, H) :-
+  Y1 is Y+1,
+  XL is X - 2**(H-Y-1),
+  XR is X + 2**(H-Y-1),
+  layout_binary_tree2(L, PL, XL, Y1, H),
+  layout_binary_tree2(R, PR, XR, Y1, H).
