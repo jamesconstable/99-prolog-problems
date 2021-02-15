@@ -134,6 +134,7 @@ hbal_tree(H, t(x, L, R)) :-
 %    the minimum number MinN? This question is more difficult. Try to find a
 %    recursive statement and turn it into a predicate minNodes/2 defined as
 %    follows:
+
 %    minNodes(H, N) :- N is the minimum number of nodes in a height-balanced
 %    binary tree of height H. (integer, integer), (+, ?)
 
@@ -145,6 +146,7 @@ minNodes(H, N) :-
 
 % b) On the other hand, we might ask: what is the maximum height H a
 %    height-balanced binary tree with N nodes can have?
+
 %    maxHeight(N, H) :- H is the maximum height of a height-balanced binary tree
 %    with N nodes. (integer, integer), (+, ?)
 
@@ -158,6 +160,7 @@ maxHeight(N, H, HCurr) :-
 % c) Now, we can attack the main problem: construct all the height-balanced
 %    binary trees with a given nuber of nodes. Find out how many height-balanced
 %    trees exist for N = 15.
+
 %    hbal_tree_nodes(N, T) :- T is a height-balanced binary tree with N nodes.
 
 hbal_tree_nodes(N, T) :-
@@ -177,3 +180,52 @@ log2(X, R) :- R is log(X) / log(2).
 minHeight(N, H) :- H is 1 + floor(log2(N)).
 
 count_hbal_trees(N, R) :- setof(T, hbal_tree_nodes(N, T), Ts), length(Ts, R).
+
+
+% 4.08 (*) Count the leaves of a binary tree.
+% A leaf is a node with no successors. Write a predicate count_leaves/2 to count
+% them.
+
+% count_leaves(T, N) :- the binary tree T has N leaves
+
+count_leaves(nil, 0).
+count_leaves(t(_, nil, nil), 1) :- !.
+count_leaves(t(_, L, R), N) :-
+  count_leaves(L, Nl), count_leaves(R, Nr), N is Nl+Nr.
+
+
+% 4.09 (*) Collect the leaves of a binary tree in a list.
+% A leaf is a node with no successors. Write a predicate leaves/2 to collect
+% them in a list.
+
+% leaves(T, S) :- S is the list of all leaves of the binary tree T
+
+leaves(nil, []).
+leaves(t(X, nil, nil), [X]) :- !.
+leaves(t(_, L, R), Ls) :- leaves(L, Ls1), leaves(R, Ls2), append(Ls1, Ls2, Ls).
+
+
+% 4.10 (*) Collect the internal nodes of a binary tree in a list.
+% An internal node of a binary tree has either one or two non-empty successors.
+% Write a predicate internals/2 to collect them in a list.
+
+% internals(T,S) :- S is the list of internal nodes of the binary tree T.
+
+internals(nil, []).
+internals(t(_, nil, nil), []) :- !.
+internals(t(X, L, R), Is) :-
+  internals(L, Is1), internals(R, Is2), append(Is1, [X|Is2], Is).
+
+
+% 4.11 (*) Collect the nodes at a given level in a list.
+% A node of a binary tree is at level N if the path from the root to the node
+% has length N-1. The root node is at level 1. Write a predicate atlevel/3 to
+% collect all nodes at a given level in a list.
+
+% atlevel(T,L,S) :- S is the list of nodes of the binary tree T at level L
+
+atlevel(_, 0, []).
+atlevel(nil, _, []).
+atlevel(t(X, _, _), 1, [X]) :- !.
+atlevel(t(_, L, R), N, S) :-
+  N_ is N-1, atlevel(L, N_, Sl), atlevel(R, N_, Sr), append(Sl, Sr, S).
