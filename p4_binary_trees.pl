@@ -144,6 +144,7 @@ minNodes(1, 1).
 minNodes(H, N) :-
   H > 1, H1 is H-1, H2 is H-2, minNodes(H1, N1), minNodes(H2, N2), N is N1+N2+1.
 
+
 % b) On the other hand, we might ask: what is the maximum height H a
 %    height-balanced binary tree with N nodes can have?
 
@@ -156,6 +157,7 @@ maxHeight(N, H, HCurr) :-
   minNodes(HCurr, M), M =< N, HCurr_ is HCurr+1, maxHeight(N, H, HCurr_).
 maxHeight(N, H, HCurr) :-
   minNodes(HCurr, M), M > N, H is HCurr-1.
+
 
 % c) Now, we can attack the main problem: construct all the height-balanced
 %    binary trees with a given nuber of nodes. Find out how many height-balanced
@@ -325,3 +327,42 @@ layout_binary_tree2(t(W, L, R), t(W, X, Y, PL, PR), X, Y, H) :-
   XR is X + 2**(H-Y-1),
   layout_binary_tree2(L, PL, XL, Y1, H),
   layout_binary_tree2(R, PR, XR, Y1, H).
+
+
+% 4.16 (**) A string representation of binary trees.
+% Somebody represents binary trees as strings of the following type:
+% a(b(d,e),c(,f(g,)))
+
+% a) Write a Prolog predicate which generates this string representation, if the
+%    tree is given as usual (as nil or t(X,L,R) term). Then write a predicate
+%    which does this inverse; i.e. given the string representation, construct
+%    the tree in the usual form. Finally, combine the two predicates in a single
+%    predicate tree_string/2 which can be used in both directions.
+%    For simplicity, suppose the information in the nodes is a single letter and
+%    there are no spaces in the string.
+
+tree_string(T, S) :- nonvar(T), tree_to_atom_list(T, As), atom_chars(S, As).
+tree_string(T, S) :- nonvar(S), atom_chars(S, As), atom_list_to_tree(As, T).
+
+tree_to_atom_list(nil, []).
+tree_to_atom_list(t(X, nil, nil), [X]) :- !.
+tree_to_atom_list(t(X, L, R), As) :-
+  tree_to_atom_list(L, LAs),
+  tree_to_atom_list(R, RAs),
+  append([X,'('|LAs], [','|RAs], As_),
+  append(As_, [')'], As).
+
+atom_list_to_tree(L, T) :- atom_list_to_tree(L, T, _).
+
+atom_list_to_tree([X,'('|Xs], t(X, LT, RT), R) :-
+  atom_list_to_tree(Xs, LT, [','|LR]),
+  atom_list_to_tree(LR, RT, [')'|R]), !.
+atom_list_to_tree([X|R], t(X, nil, nil), R) :-
+  char_type(X, alpha), !.
+atom_list_to_tree(R, nil, R).
+
+
+% b) Write the same predicate tree_string/2 using difference lists and a single
+%    predicate tree_dlist/2 which does the conversion between a tree and a
+%    difference list in both directions.
+
