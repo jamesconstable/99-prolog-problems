@@ -329,6 +329,49 @@ layout_binary_tree2(t(W, L, R), t(W, X, Y, PL, PR), X, Y, H) :-
   layout_binary_tree2(R, PR, XR, Y1, H).
 
 
+% 4.15 (***) Layout a binary tree (3).
+% Yet another layout strategy is shown in the illustration at:
+% https://sites.google.com/site/prologsite/prolog-problems/4/p66.gif
+% The method yields a very compact layout while maintaining a certain symmetry
+% in every node. Find out the rules and write the corresponding Prolog
+% predicate.
+
+% Hint: Consider the horizontal distance between a node and its
+% successor nodes. How tight can you pack together two subtrees to construct the
+% combined binary tree?
+
+% Implementation note: this solution allows negative x-values. If this is
+% undesirable, an extra step could be added that finds the minimum value in
+% LEdge and shifts the tree by that amount * -1.
+
+layout_binary_tree3(T, PT) :- layout_binary_tree3(T, PT, 1, _, _).
+
+layout_binary_tree3(nil, nil, _, [], []).
+layout_binary_tree3(t(W, nil, nil), t(W, 1, Y, nil, nil), Y, [1], [1]) :- !.
+layout_binary_tree3(t(W, L, R), t(W, X, Y, PL, PR), Y, [X|LEdge], [X|REdge]) :-
+  Y_ is Y+1,
+  layout_binary_tree3(L, PL, Y_, LEdge, LREdge),
+  layout_binary_tree3(R, PR_, Y_, RLEdge, RREdge),
+  maplist(plus(2), LREdge, LRBoundary),
+  zip_subtract(LRBoundary, RLEdge, Overlap),
+  max_list([0|Overlap], Offset),
+  shift_tree(PR_, Offset, PR),
+  maplist(plus(Offset), RREdge, REdge),
+  (PL = t(_, LX, _, _, _), ! ; LX = RX-2),
+  (PR = t(_, RX, _, _, _), ! ; RX = LX+2),
+  X is (LX + RX) / 2.
+
+zip_subtract([], _, []) :- !.
+zip_subtract(_, [], []).
+zip_subtract([X|Xs], [Y|Ys], [Z|Zs]) :- zip_subtract(Xs, Ys, Zs), Z is X-Y.
+
+shift_tree(nil, _, nil).
+shift_tree(t(W, X, Y, L, R), Offset, t(W, X_, Y, L_, R_)) :-
+  shift_tree(L, Offset, L_),
+  shift_tree(R, Offset, R_),
+  X_ is X + Offset.
+
+
 % 4.16 (**) A string representation of binary trees.
 % Somebody represents binary trees as strings of the following type:
 % a(b(d,e),c(,f(g,)))
