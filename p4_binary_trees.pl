@@ -409,3 +409,19 @@ atom_list_to_tree(R, nil, R).
 %    predicate tree_dlist/2 which does the conversion between a tree and a
 %    difference list in both directions.
 
+tree_string2(T, S) :- nonvar(T), tree_dlist(T, As-[]), atom_chars(S, As).
+tree_string2(T, S) :- nonvar(S), atom_chars(S, As), tree_dlist(T, As-[]).
+
+tree_dlist(nil, H-H).
+tree_dlist(t(X, nil, nil), [X|H]-H) :- char_type(X, alpha).
+tree_dlist(t(X, L, R), DL-H) :-
+  % Avoid invalid backtracking if running in the forwards direction
+  (nonvar(X) -> \+ (L = nil, R = nil) ; true),
+  dlist_first(X, DL-DL1),
+  dlist_first('(', DL1-DL2),
+  tree_dlist(L, DL2-DL3),
+  dlist_first(',', DL3-DL4),
+  tree_dlist(R, DL4-DL5),
+  dlist_first(')', DL5-H).
+
+dlist_first(X, [X|Xs]-Xs).
