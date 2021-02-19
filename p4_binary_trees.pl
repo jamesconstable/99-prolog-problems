@@ -425,3 +425,69 @@ tree_dlist(t(X, L, R), DL-H) :-
   dlist_first(')', DL5-H).
 
 dlist_first(X, [X|Xs]-Xs).
+
+
+% 4.17 (**) Preorder and inorder sequences of binary trees.
+% We consider binary trees with nodes that are identified by single lower-case
+% letters, as in the example of problem 4.16.
+
+% a) Write predicates preorder/2 and inorder/2 that construct the preorder and
+%    inorder sequence of a given binary tree, respectively. The results should
+%    be atoms.
+
+% b) Can you use preorder/2 from problem part a) in the reverse direction; i.e.
+%    given a preorder sequence, construct a corresponding tree? If not, make the
+%    necessary arrangements.
+
+preorder(T, S) :- nonvar(T), !, preorder_f(T, As), atom_chars(S, As).
+preorder(T, S) :- atom_chars(S, As), preorder_b(T, As).
+
+preorder_f(nil, []).
+preorder_f(t(X, L, R), [X|Xs]) :-
+  preorder_f(L, LL), preorder_f(R, RL), append(LL, RL, Xs).
+
+preorder_b(nil, []).
+preorder_b(t(X, L, R), [X|Xs]) :-
+  append(LL, RL, Xs), preorder_b(L, LL), preorder_b(R, RL).
+
+inorder(T, S) :- nonvar(T), !, inorder_f(T, As), atom_chars(S, As).
+inorder(T, S) :- atom_chars(S, As), inorder_b(T, As).
+
+inorder_f(nil, []).
+inorder_f(t(X, L, R), Xs) :-
+  inorder_f(L, LL), inorder_f(R, RL), append(LL, [X|RL], Xs).
+
+inorder_b(nil, []).
+inorder_b(t(X, L, R), Xs) :-
+  append(LL, [X|RL], Xs), inorder_b(L, LL), inorder_b(R, RL).
+
+
+% c) If both the preorder sequence and the inorder sequence of the nodes of a
+%    binary tree are given, then the tree is determined unambiguously. Write a
+%    predicate pre_in_tree/3 that does the job.
+
+pre_in_tree(P, I, T) :- preorder(T, P), inorder(T, I).
+
+
+% d) Solve problems a) to c) using difference lists. Cool! Use the predefined
+%    predicate time/1 to compare the solutions.
+
+preorder_dl(T, S) :- preorder_dl_(T, As-[]), atom_chars(S, As).
+
+preorder_dl_(nil, H-H).
+preorder_dl_(t(X, L, R), [X|DL]-H) :-
+  preorder_dl_(L, DL-DL1), preorder_dl_(R, DL1-H).
+
+inorder_dl(T, S) :- inorder_dl_(T, As-[]), atom_chars(S, As).
+
+inorder_dl_(nil, H-H).
+inorder_dl_(t(X, L, R), DL-H) :-
+  inorder_dl_(L, DL-DL1), dlist_first(X, DL1-DL2), inorder_dl_(R, DL2-H).
+
+pre_in_tree_dl(P, I, T) :-
+  atom_chars(P, PL), atom_chars(I, IL), pre_in_tree_dl_(PL-[], IL-[], T).
+
+pre_in_tree_dl_(P-P, I-I, nil).
+pre_in_tree_dl_([X|P]-PH, I-IH, t(X, L, R)) :-
+  pre_in_tree_dl_(P-P1, I-[X|I1], L),
+  pre_in_tree_dl_(P1-PH, I1-IH, R).
