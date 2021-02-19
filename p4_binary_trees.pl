@@ -491,3 +491,24 @@ pre_in_tree_dl_(P-P, I-I, nil).
 pre_in_tree_dl_([X|P]-PH, I-IH, t(X, L, R)) :-
   pre_in_tree_dl_(P-P1, I-[X|I1], L),
   pre_in_tree_dl_(P1-PH, I1-IH, R).
+
+
+% 4.18 (**) Dotstring representation of binary trees.
+% We consider again binary trees with nodes that are identified by single
+% lower-case letters. Such a tree can be represented by the preorder sequence of
+% its nodes in which dots (.) are inserted where an empty subtree (nil) is
+% encountered during the tree traversal. For example, 'abd..e..c.fg...'. First,
+% try to establish a syntax (BNF or syntax diagrams) and then write a predicate
+% tree_dotstring/2 which does the conversion in both directions. Use difference
+% lists.
+
+tree_dotstring(T, S) :-
+  nonvar(T), !, tree_dotstring_(T, As-[]), atom_chars(S, As).
+tree_dotstring(T, S) :- atom_chars(S, As), tree_dotstring_(T, As-[]).
+
+tree_dotstring_(nil, ['.'|H]-H).
+tree_dotstring_(t(X, L, R), [X|DL]-H) :-
+  char_type(X, alpha),
+  tree_dotstring_(L, DL-DL1),
+  tree_dotstring_(R, DL1-H).
+
