@@ -81,3 +81,43 @@ iterate(Nodes, R) :-
   flatten(Cs, Cs1),
   iterate(Cs1, CVs),
   append(CVs, Vs, R).
+
+
+% 5.06 (**) Lisp-like tree representation.
+% There is a particular notation for multiway trees in Lisp. Lisp is a prominent
+% functional programming language, which is used primarily for artificial
+% intelligence problems. As such it is one of the main competitors of Prolog. In
+% Lisp almost everything is a list, just as in Prolog everything is a term.
+
+% The picture at:
+% https://sites.google.com/site/prologsite/prolog-problems/5/p73.png?attredirects=0
+% shows how multiway tree structures are represented in Lisp.
+
+% Note that in the "lispy" notation a node with successors (children) in the
+% tree is always the first element in a list, followed by its children. The
+% "lispy" representation of a multiway tree is a sequence of atoms and
+% parentheses '(' and ')', which we shall collectively call "tokens". We can
+% represent this sequence of tokens as a Prolog list; e.g. the lispy expression
+% (a (b c)) could be represented as the Prolog list
+% ['(', a, '(', b, c, ')', ')']. Write a predicate tree_ltl(T,LTL) which
+% constructs the "lispy token list" LTL if the tree is given as term T in the
+% usual Prolog notation.
+
+% Example:
+% ?- tree_ltl(t(a, [t(b, [t(c, [])])]), LTL).
+% LTL = ['(', a, '(', b, c, ')', ')']
+
+% As a second, even more interesting exercise try to rewrite tree_ltl/2 in a way
+% that the inverse conversion is also possible: Given the list LTL, construct
+% the Prolog tree T. Use difference lists.
+
+tree_ltl(T, LTL) :- tree_ltl_(T, LTL-[]).
+
+tree_ltl_(t(X, []), [X|H]-H) :-
+  char_type(X, alpha).
+tree_ltl_(t(X, Cs), ['(', X|L1]-L3) :-
+  Cs = [_|_], char_type(X, alpha),
+  children_ltl(Cs, L1-L2), L2 = [')'|L3].
+
+children_ltl([], H-H).
+children_ltl([C|Cs], L-L2) :- tree_ltl_(C, L-L1), children_ltl(Cs, L1-L2).
