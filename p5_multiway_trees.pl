@@ -1,3 +1,7 @@
+:- use_module(library(yall)).
+:- use_module(library(apply)).
+:- use_module(library(apply_macros)).
+
 % 5.01 (*) Check whether a given term represents a multiway tree.
 % Write a predicate istree/1 which succeeds if and only if its argument is a
 % Prolog term representing a multiway tree.
@@ -42,3 +46,18 @@ tree([X|S], S_, t(X, C)) :- char_type(X, alpha), trees(S, ['^'|S_], C).
 
 trees(['^'|S], ['^'|S], []).
 trees(S, S2, [T|Ts]) :- tree(S, S1, T), trees(S1, S2, Ts).
+
+
+% 5.04 (*) Determine the internal path length of a tree.
+% We define the internal path length of a multiway tree as the total sum of the
+% path lengths from the root to all nodes of the tree. By this definition, the
+% tree in the figure of problem 5.03 has an internal path length of 9.
+
+% Write a predicate ipl(Tree,IPL) for the flow pattern (+,-).
+
+ipl(T, I) :- ipl(T, I, 0).
+
+ipl(t(_, Ts), IPL, D) :-
+  D1 is D + 1,
+  maplist({D1}/[T, S]>>ipl(T, S, D1), Ts, Ss),
+  foldl(plus, Ss, D, IPL).
