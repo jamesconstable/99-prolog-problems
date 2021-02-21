@@ -61,3 +61,23 @@ ipl(t(_, Ts), IPL, D) :-
   D1 is D + 1,
   maplist({D1}/[T, S]>>ipl(T, S, D1), Ts, Ss),
   foldl(plus, Ss, D, IPL).
+
+
+ % 5.05 (*) Construct the bottom-up order sequence of the tree nodes.
+ % Write a predicate bottom_up(Tree,Seq) which constructs the bottom-up sequence
+ % of the nodes of the multiway tree Tree. Seq should be a Prolog list.
+
+ % What happens if you run your predicate backwards?
+
+bottom_up(Tree, Seq) :- iterate([Tree], Seq).
+
+value(t(V, _), V).
+children(t(_, Cs), Cs).
+
+iterate([], []).
+iterate(Nodes, R) :-
+  maplist(value, Nodes, Vs),
+  maplist(children, Nodes, Cs),
+  flatten(Cs, Cs1),
+  iterate(Cs1, CVs),
+  append(CVs, Vs, R).
