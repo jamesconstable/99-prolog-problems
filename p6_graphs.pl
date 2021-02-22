@@ -45,42 +45,37 @@
 
 % Convert between edge-clause and graph-term forms in either flow order, for
 % both directed and undirected, labelled and unlabelled.
-ec_gt(ECs, G) :- nonvar(ECs), ECs = [E|_], is_arc(E), !, ec_to_gt_d(ECs, G).
-ec_gt(ECs, G) :- nonvar(ECs), !, ec_to_gt_u(ECs, G).
-ec_gt(ECs, G) :- G = digraph(_, _), !, gt_to_ec_d(G, ECs).
-ec_gt(ECs, G) :- gt_to_ec_u(G, ECs).
+ec_gt(ECs, G) :- nonvar(ECs), ECs = [E|_], is_arc(E), !, ec_to_gt(ECs, G, d).
+ec_gt(ECs, G) :- nonvar(ECs), !, ec_to_gt(ECs, G, u).
+ec_gt(ECs, G) :- G = digraph(_, _), !, gt_to_ec(G, ECs, d).
+ec_gt(ECs, G) :- gt_to_ec(G, ECs, u).
 
 is_arc(arc(_, _)).
 is_arc(arc(_, _, _)).
 
-% Convert undirected edge-clause to graph-term.
-ec_to_gt_u([], graph([], [])).
-ec_to_gt_u([Edge|Edges], graph(N2, E2)) :-
-  ec_to_gt_u(Edges, graph(N1, E1)),
+% Convert edge-clause to graph-term.
+ec_to_gt([], G, D) :- graph_terms(G, [], [], D).
+ec_to_gt([Edge|Edges], G, D) :-
+  ec_to_gt(Edges, G1, D),
+  graph_term(G1, N1, E1, _),
   e_edge_nodes(E, Edge, Ns),
   ord_union(N1, Ns, N2),
-  ord_union(E1, [E], E2).
+  ord_union(E1, [E], E2),
+  graph_term(G, N2, E2, D).
 
-% Convert undirected graph-term to edge-clause.
-gt_to_ec_u(graph(_, Es), Edges) :- maplist(e_edge_nodes, Es, Edges, _).
+% Convert graph-term to edge-clause.
+gt_to_ec(G, Edges, _) :-
+  graph_term(G, _, Es, _), maplist(e_edge_nodes, Es, Edges, _).
 
-% Convert directed edge-clause to graph-term.
-ec_to_gt_d([], digraph([], [])).
-ec_to_gt_d([Arc|Arcs], digraph(N2, A2)) :-
-  ec_to_gt_d(Arcs, digraph(N1, A1)),
-  a_arc_nodes(A, Arc, Ns),
-  ord_union(N1, Ns, N2),
-  ord_union(A1, [A], A2).
+% Convert between (di)graphs and their component terms. The final u/d term flags
+% directedness (necessary when using in the construction flow order).
+graph_term(graph(Ns, Es),   Ns, Es, u).
+graph_term(digraph(Ns, As), Ns, As, d).
 
-% Convert directed graph-term to edge-clause.
-gt_to_ec_d(digraph(_, As), Arcs) :- maplist(a_arc_nodes, As, Arcs, _).
-
-% Convert between e terms, edge terms and sorted node pair lists.
-e_edge_nodes(e(A, B), edge(A_, B_), [A, B]) :- msort([A_, B_], [A, B]).
-e_edge_nodes(e(A, B, C), edge(A_, B_, C), [A, B]) :- msort([A_, B_], [A, B]).
-
-% Convert between a terms, arc terms and sorted node pair lists.
-a_arc_nodes(a(A_, B_), arc(A_, B_), [A, B]) :- msort([A_, B_], [A, B]).
-a_arc_nodes(a(A_, B_, C), arc(A_, B_, C), [A, B]) :- msort([A_, B_], [A, B]).
+% Convert between e/a terms, edge/arc terms and sorted node pair lists.
+e_edge_nodes(e(A, B),      edge(A_, B_),    [A, B]) :- msort([A_, B_], [A, B]).
+e_edge_nodes(e(A, B, C),   edge(A_, B_, C), [A, B]) :- msort([A_, B_], [A, B]).
+e_edge_nodes(a(A_, B_),    arc(A_, B_),     [A, B]) :- msort([A_, B_], [A, B]).
+e_edge_nodes(a(A_, B_, C), arc(A_, B_, C),  [A, B]) :- msort([A_, B_], [A, B]).
 
 
