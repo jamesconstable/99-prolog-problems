@@ -48,7 +48,8 @@
 %     [p>q/9, m>q/7, k, p>m/5]
 
 % Convert between edge-clause and graph-term forms in either flow order, for
-% both directed and undirected, labelled and unlabelled.
+% both directed and undirected, labelled and unlabelled. Edge-clause form
+% cannot encode isolated nodes, so these are lost in the (?, +) flow order.
 ec_gt(ECs, G) :-
   nonvar(ECs), ECs = [E|_], functor(E, arc, _), !, ec_to_gt(ECs, G, d).
 ec_gt(ECs, G) :- nonvar(ECs), !, ec_to_gt(ECs, G, u).
@@ -133,3 +134,11 @@ al_to_gt([n(N, Neighbours)|Ns], digraph(GNs_, GEs_)) :-
     {N}/[Neighbour, A]>>(arc_split(HF, N, Neighbour), edge_terms(A, _, HF, _)),
     Neighbours, As),
   ord_union(GEs, As, GEs_).
+
+% Convert between edge-clause and adjacency-list forms in either flow order, for
+% both directed and undirected, labelled and unlabelled. The edge-clause form
+% cannot encode isolated nodes, so these are lost in the (?, +) flow order.
+% Conversely, adjacency-list form doesn't distinguish between graphs and
+% digraphs, so the edge-clause form in (?, +) flow order always uses arcs.
+ec_al(EC, AL) :- nonvar(EC), !, ec_gt(EC, GT), gt_al(GT, AL).
+ec_al(EC, AL) :- gt_al(GT, AL), ec_gt(EC, GT).
