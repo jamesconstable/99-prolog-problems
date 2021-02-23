@@ -1,4 +1,8 @@
+:- use_module(library(apply)).
+:- use_module(library(apply_macros)).
+:- use_module(library(assoc)).
 :- use_module(library(ordsets)).
+:- use_module(library(yall)).
 
 % 6.01 (***) Conversions
 
@@ -45,37 +49,73 @@
 
 % Convert between edge-clause and graph-term forms in either flow order, for
 % both directed and undirected, labelled and unlabelled.
-ec_gt(ECs, G) :- nonvar(ECs), ECs = [E|_], is_arc(E), !, ec_to_gt(ECs, G, d).
+ec_gt(ECs, G) :-
+  nonvar(ECs), ECs = [E|_], functor(E, arc, _), !, ec_to_gt(ECs, G, d).
 ec_gt(ECs, G) :- nonvar(ECs), !, ec_to_gt(ECs, G, u).
 ec_gt(ECs, G) :- G = digraph(_, _), !, gt_to_ec(G, ECs, d).
 ec_gt(ECs, G) :- gt_to_ec(G, ECs, u).
 
-is_arc(arc(_, _)).
-is_arc(arc(_, _, _)).
-
 % Convert edge-clause to graph-term.
-ec_to_gt([], G, D) :- graph_terms(G, [], [], D).
+ec_to_gt([], G, D) :- graph_term(G, [], [], D).
 ec_to_gt([Edge|Edges], G, D) :-
   ec_to_gt(Edges, G1, D),
   graph_term(G1, N1, E1, _),
-  e_edge_nodes(E, Edge, Ns),
+  edge_terms(E, Edge, _, UNs),
+  msort(UNs, Ns),
   ord_union(N1, Ns, N2),
   ord_union(E1, [E], E2),
   graph_term(G, N2, E2, D).
 
 % Convert graph-term to edge-clause.
 gt_to_ec(G, Edges, _) :-
-  graph_term(G, _, Es, _), maplist(e_edge_nodes, Es, Edges, _).
+  graph_term(G, _, Es, _), maplist(edge_terms, Es, Edges, _, _).
 
 % Convert between (di)graphs and their component terms. The final u/d term flags
 % directedness (necessary when using in the construction flow order).
 graph_term(graph(Ns, Es),   Ns, Es, u).
 graph_term(digraph(Ns, As), Ns, As, d).
 
-% Convert between e/a terms, edge/arc terms and sorted node pair lists.
-e_edge_nodes(e(A, B),      edge(A_, B_),    [A, B]) :- msort([A_, B_], [A, B]).
-e_edge_nodes(e(A, B, C),   edge(A_, B_, C), [A, B]) :- msort([A_, B_], [A, B]).
-e_edge_nodes(a(A_, B_),    arc(A_, B_),     [A, B]) :- msort([A_, B_], [A, B]).
-e_edge_nodes(a(A_, B_, C), arc(A_, B_, C),  [A, B]) :- msort([A_, B_], [A, B]).
+% Convert between e/a terms, edge/arc terms, "human-friendly" terms and node
+% lists.
+edge_terms(e(A, B),    edge(A, B),    A-B,   [A, B]).
+edge_terms(e(A, B, C), edge(A, B, C), A-B/C, [A, B]).
+edge_terms(a(A, B),    arc(A, B),     A>B,   [A, B]).
+edge_terms(a(A, B, C), arc(A, B, C),  A>B/C, [A, B]).
 
+% Convert between graph-term and adjacency-list forms in either flow order, for
+% both directed and undirected, labelled and unlabelled.
+gt_al(G, AL) :- nonvar(G), !, gt_to_al(G, AL).
+gt_al(G, AL) :- al_to_gt(AL, G).
+
+% Convert graph-term to adjacency-list.
+gt_to_al(G, AL) :-
+  graph_term(G, Ns, Es, _),
+  maplist([X, Y]>>(Y = X-[]), Ns, Empties),
+  list_to_assoc(Empties, Assoc),
+  expand_edges(Es, As),
+  add_arcs_to_assoc(As, Assoc, Assoc1),
+  assoc_to_list(Assoc1, Pairs),
+  maplist([P, N]>>(P = K-V, msort(V, V1), N = n(K, V1)), Pairs, AL).
+
+% Convert e/a terms to human-friendly arc terms, with edges expanded to two
+% arc terms rather than the corresponding -/2 functor.
+expand_edges([], []).
+expand_edges([E|Es], A) :- edge_arcs(E, A, A1), expand_edges(Es, A1).
+
+% Convert an e/a term to a difference list of human-friendly arc terms, with
+% edges being expanded to two arc terms.
+edge_arcs(e(A, B),    [A>B, B>A|X],     X).
+edge_arcs(e(A, B, C), [A>B/C, B>A/C|X], X).
+edge_arcs(a(A, B),    [A>B|X],          X).
+edge_arcs(a(A, B, C), [A>B/C|X],        X).
+
+add_arcs_to_assoc([], A, A).
+add_arcs_to_assoc([X|Xs], A, A_) :-
+  arc_split(X, P, Q),
+  get_assoc(P, A, V),
+  put_assoc(P, A, [Q|V], A1),
+  add_arcs_to_assoc(Xs, A1, A_).
+
+arc_split(A>B, A, B).
+arc_split(A>B/C, A, B/C).
 
