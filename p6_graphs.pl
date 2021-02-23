@@ -83,7 +83,9 @@ edge_terms(a(A, B),    arc(A, B),     A>B,   [A, B]).
 edge_terms(a(A, B, C), arc(A, B, C),  A>B/C, [A, B]).
 
 % Convert between graph-term and adjacency-list forms in either flow order, for
-% both directed and undirected, labelled and unlabelled.
+% both directed and undirected, labelled and unlabelled. The adjacency-list form
+% doesn't distinguish between graphs and digraphs, the (?, +) flow order always
+% returns a digraph.
 gt_al(G, AL) :- nonvar(G), !, gt_to_al(G, AL).
 gt_al(G, AL) :- al_to_gt(AL, G).
 
@@ -116,6 +118,18 @@ add_arcs_to_assoc([X|Xs], A, A_) :-
   put_assoc(P, A, [Q|V], A1),
   add_arcs_to_assoc(Xs, A1, A_).
 
+% Relates a human-friendly arc term to its start and end/label (as used in the
+% adjacency list representation).
 arc_split(A>B, A, B).
 arc_split(A>B/C, A, B/C).
 
+% Convert adjacency-list to graph-term. The adjacency-list form doesn't
+% distinguish between graphs and digraphs, so we always return a digraph.
+al_to_gt([], digraph([], [])).
+al_to_gt([n(N, Neighbours)|Ns], digraph(GNs_, GEs_)) :-
+  al_to_gt(Ns, digraph(GNs, GEs)),
+  ord_union(GNs, [N], GNs_),
+  maplist(
+    {N}/[Neighbour, A]>>(arc_split(HF, N, Neighbour), edge_terms(A, _, HF, _)),
+    Neighbours, As),
+  ord_union(GEs, As, GEs_).
