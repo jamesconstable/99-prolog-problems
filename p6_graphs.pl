@@ -113,16 +113,10 @@ edge_arcs(a(A, B),    [A>B|X],          X).
 edge_arcs(a(A, B, C), [A>B/C|X],        X).
 
 add_arcs_to_assoc([], A, A).
-add_arcs_to_assoc([X|Xs], A, A_) :-
-  arc_split(X, P, Q),
+add_arcs_to_assoc([P>Q|Xs], A, A_) :-
   get_assoc(P, A, V),
   put_assoc(P, A, [Q|V], A1),
   add_arcs_to_assoc(Xs, A1, A_).
-
-% Relates a human-friendly arc term to its start and end/label (as used in the
-% adjacency list representation).
-arc_split(A>B, A, B).
-arc_split(A>B/C, A, B/C).
 
 % Convert adjacency-list to graph-term. The adjacency-list form doesn't
 % distinguish between graphs and digraphs, so we always return a digraph.
@@ -130,9 +124,7 @@ al_to_gt([], digraph([], [])).
 al_to_gt([n(N, Neighbours)|Ns], digraph(GNs_, GEs_)) :-
   al_to_gt(Ns, digraph(GNs, GEs)),
   ord_union(GNs, [N], GNs_),
-  maplist(
-    {N}/[Neighbour, A]>>(arc_split(HF, N, Neighbour), edge_terms(A, _, HF, _)),
-    Neighbours, As),
+  maplist({N}/[Neighbour, A]>>edge_terms(A, _, N>Neighbour, _), Neighbours, As),
   ord_union(GEs, As, GEs_).
 
 % Convert between edge-clause and adjacency-list forms in either flow order, for
@@ -142,3 +134,25 @@ al_to_gt([n(N, Neighbours)|Ns], digraph(GNs_, GEs_)) :-
 % digraphs, so the edge-clause form in (?, +) flow order always uses arcs.
 ec_al(EC, AL) :- nonvar(EC), !, ec_gt(EC, GT), gt_al(GT, AL).
 ec_al(EC, AL) :- gt_al(GT, AL), ec_gt(EC, GT).
+
+hf_gt(HF, GT) :- nonvar(HF), is_directed(HF), !, hf_to_gt(HF, GT, d).
+hf_gt(HF, GT) :- nonvar(HF), !, hf_to_gt(HF, GT, u).
+hf_gt(HF, GT) :- gt_to_hf(GT, HF).
+
+is_directed([_>_|_]) :- !.
+is_directed([_|T]) :- is_directed(T).
+
+hf_to_gt([], G, D) :- graph_term(G, [], [], D).
+hf_to_gt([E|HFs], G_, D) :-
+  (E = (_>_); E = (_-_)), !,
+  hf_to_gt(HFs, G, D),
+  graph_term(G, Ns, Es, _),
+  edge_terms(A, _, E, US),
+  msort(US, S),
+  ord_union(Ns, S, Ns_),
+  graph_term(G_, Ns_, [A|Es], D).
+hf_to_gt([N|HFs], G_, D) :-
+  hf_to_gt(HFs, G, D),
+  graph_term(G, Ns, Es, _),
+  ord_union(Ns, [N], Ns_),
+  graph_term(G_, Ns_, Es, D).
