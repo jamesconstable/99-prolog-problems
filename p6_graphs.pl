@@ -47,9 +47,9 @@
 %     [s > r, t, u > r, s > u, u > s, v > u]
 %     [p>q/9, m>q/7, k, p>m/5]
 
-% Convert between edge-clause and graph-term forms in either flow order, for
-% both directed and undirected, labelled and unlabelled. Edge-clause form
-% cannot encode isolated nodes, so these are lost in the (?, +) flow order.
+% Convert between edge-clause and graph-term forms in either flow order.
+% Edge-clause form cannot encode isolated nodes, so these are lost in the (?, +)
+% flow order.
 ec_gt(ECs, G) :-
   nonvar(ECs), ECs = [E|_], functor(E, arc, _), !, ec_to_gt(ECs, G, d).
 ec_gt(ECs, G) :- nonvar(ECs), !, ec_to_gt(ECs, G, u).
@@ -83,10 +83,9 @@ edge_terms(e(A, B, C), edge(A, B, C), A-B/C, [A, B]).
 edge_terms(a(A, B),    arc(A, B),     A>B,   [A, B]).
 edge_terms(a(A, B, C), arc(A, B, C),  A>B/C, [A, B]).
 
-% Convert between graph-term and adjacency-list forms in either flow order, for
-% both directed and undirected, labelled and unlabelled. The adjacency-list form
-% doesn't distinguish between graphs and digraphs, the (?, +) flow order always
-% returns a digraph.
+% Convert between graph-term and adjacency-list forms in either flow order.
+% Note that adjacency-list form doesn't distinguish between graphs and digraphs,
+% so the (?, +) flow order always returns a digraph.
 gt_al(G, AL) :- nonvar(G), !, gt_to_al(G, AL).
 gt_al(G, AL) :- al_to_gt(AL, G).
 
@@ -96,9 +95,10 @@ gt_to_al(G, AL) :-
   maplist([X, Y]>>(Y = X-[]), Ns, Empties),
   list_to_assoc(Empties, Assoc),
   expand_edges(Es, As),
-  add_arcs_to_assoc(As, Assoc, Assoc1),
+  foldl([P>Q, A, A1]>>(get_assoc(P, A, V), put_assoc(P, A, [Q|V], A1)),
+    As, Assoc, Assoc1),
   assoc_to_list(Assoc1, Pairs),
-  maplist([P, N]>>(P = K-V, msort(V, V1), N = n(K, V1)), Pairs, AL).
+  maplist([K-V, N]>>(msort(V, V1), N = n(K, V1)), Pairs, AL).
 
 % Convert e/a terms to human-friendly arc terms, with edges expanded to two
 % arc terms rather than the corresponding -/2 functor.
@@ -112,12 +112,6 @@ edge_arcs(e(A, B, C), [A>B/C, B>A/C|X], X).
 edge_arcs(a(A, B),    [A>B|X],          X).
 edge_arcs(a(A, B, C), [A>B/C|X],        X).
 
-add_arcs_to_assoc([], A, A).
-add_arcs_to_assoc([P>Q|Xs], A, A_) :-
-  get_assoc(P, A, V),
-  put_assoc(P, A, [Q|V], A1),
-  add_arcs_to_assoc(Xs, A1, A_).
-
 % Convert adjacency-list to graph-term. The adjacency-list form doesn't
 % distinguish between graphs and digraphs, so we always return a digraph.
 al_to_gt([], digraph([], [])).
@@ -127,27 +121,32 @@ al_to_gt([n(N, Neighbours)|Ns], digraph(GNs_, GEs_)) :-
   maplist({N}/[Neighbour, A]>>edge_terms(A, _, N>Neighbour, _), Neighbours, As),
   ord_union(GEs, As, GEs_).
 
-% Convert between edge-clause and adjacency-list forms in either flow order, for
-% both directed and undirected, labelled and unlabelled. The edge-clause form
-% cannot encode isolated nodes, so these are lost in the (?, +) flow order.
-% Conversely, adjacency-list form doesn't distinguish between graphs and
-% digraphs, so the edge-clause form in (?, +) flow order always uses arcs.
+% Convert between edge-clause and adjacency-list forms in either flow order.
+% Note that isolated nodes are lost in the (?, +) flow order as edge-clause form
+% has no way to represent them, and arcs are always used, as adjacency-list form
+% doesn't distinguish between graphs and digraphs.
 ec_al(EC, AL) :- nonvar(EC), !, ec_gt(EC, GT), gt_al(GT, AL).
 ec_al(EC, AL) :- gt_al(GT, AL), ec_gt(EC, GT).
 
-hf_gt(HF, GT) :- nonvar(HF), is_directed(HF), !, hf_to_gt(HF, GT, d).
-hf_gt(HF, GT) :- nonvar(HF), !, hf_to_gt(HF, GT, u).
-hf_gt(HF, GT) :- gt_to_hf(GT, HF).
+% Convert between graph-term and human-friendly forms in either flow order.
+% Fails if arc and edges are intermixed in the human-friendly form.
+gt_hf(GT, HF) :- nonvar(GT), !, gt_to_hf(GT, HF).
+gt_hf(GT, HF) :- hf_to_gt(HF, GT, _).
 
-is_directed([_>_|_]) :- !.
-is_directed([_|T]) :- is_directed(T).
+% Convert graph-term to human-friendly.
+gt_to_hf(GT, HF) :- graph_term(GT, Ns, Es, _), gt_to_hf(Ns, Es, HF).
 
-hf_to_gt([], G, D) :- graph_term(G, [], [], D).
+gt_to_hf(Ns, [], Ns).
+gt_to_hf(Ns, [E|Es], [HF|HFs]) :-
+  edge_terms(E, _, HF, ENs), subtract(Ns, ENs, Ns1), gt_to_hf(Ns1, Es, HFs).
+
+% Convert human-friendly to graph-term.
+hf_to_gt([], G, D) :- (var(D) -> D=u; true), graph_term(G, [], [], D).
 hf_to_gt([E|HFs], G_, D) :-
-  (E = (_>_); E = (_-_)), !,
+  edge_terms(A, _, E, US), !,    % Doubles as non-isolated node check
+  (E = (_>_) -> D=d; D=u),
   hf_to_gt(HFs, G, D),
   graph_term(G, Ns, Es, _),
-  edge_terms(A, _, E, US),
   msort(US, S),
   ord_union(Ns, S, Ns_),
   graph_term(G_, Ns_, [A|Es], D).
@@ -156,3 +155,16 @@ hf_to_gt([N|HFs], G_, D) :-
   graph_term(G, Ns, Es, _),
   ord_union(Ns, [N], Ns_),
   graph_term(G_, Ns_, Es, D).
+
+% Convert between edge-clause and human-friendly forms in either flow order.
+% Note that isolated nodes are lost in the (?, +) flow order as edge-clause form
+% has no way to represent them.
+ec_hf(EC, HF) :- nonvar(EC), !, ec_gt(EC, GT), gt_hf(GT, HF).
+ec_hf(EC, HF) :- gt_hf(GT, HF), ec_gt(EC, GT).
+
+% Convert between adjacency-list and human-friendly forms in either flow order.
+% Note that adjacency-list form doesn't distinguish between graphs and digraphs,
+% so the human-friendly form in (+, ?) flow order always uses arcs.
+al_hf(AL, HF) :- nonvar(AL), !, gt_al(GT, AL), gt_hf(GT, HF).
+al_hf(AL, HF) :- gt_hf(GT, HF), gt_al(GT, AL).
+
