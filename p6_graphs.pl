@@ -59,11 +59,12 @@ ec_to_gt([Edge|Edges], G, D) :-
   (functor(Edge, arc, _) -> D=d; D=u),
   ec_to_gt(Edges, G1, D),
   graph_term(G1, N1, E1, _),
-  edge_terms(E, Edge, _, UNs),
-  msort(UNs, Ns),
-  ord_union(N1, Ns, N2),
+  edge_terms(E, Edge, _, Ns),
+  ord_add_all(N1, Ns, N2),
   ord_union(E1, [E], E2),
   graph_term(G, N2, E2, D).
+
+ord_add_all(S1, Es, S2) :- sort(Es, SEs), ord_union(S1, SEs, S2).
 
 % Convert between (di)graphs and their component terms. The final u/d term flags
 % directedness (necessary when using in the construction flow order).
@@ -137,12 +138,11 @@ gt_to_hf(Ns, [E|Es], [HF|HFs]) :-
 % Convert human-friendly to graph-term.
 hf_to_gt([], G, D) :- (var(D) -> D=u; true), graph_term(G, [], [], D).
 hf_to_gt([E|HFs], G_, D) :-
-  edge_terms(A, _, E, US), !,    % Doubles as non-isolated node check
+  edge_terms(A, _, E, S), !,    % Doubles as non-isolated node check
   (E = (_>_) -> D=d; D=u),
   hf_to_gt(HFs, G, D),
   graph_term(G, Ns, Es, _),
-  msort(US, S),
-  ord_union(Ns, S, Ns_),
+  ord_add_all(Ns, S, Ns_),
   graph_term(G_, Ns_, [A|Es], D).
 hf_to_gt([N|HFs], G_, D) :-
   hf_to_gt(HFs, G, D),
@@ -175,11 +175,14 @@ path(_, A, A, [A], _) :- !.
 path(G, A, B, [A|P], Seen) :-
   \+ get_assoc(A, Seen, _), !,
   put_assoc(A, Seen, true, Seen_),
-  neighbour(A, N, G),
+  neighbour_al(A, N, G),
   path(G, N, B, P, Seen_).
 
-neighbour(A, B, [n(A, Ns)|_]) :- member(B, Ns).
-neighbour(A, B, [_|AL]) :- neighbour(A, B, AL).
+neighbour_al(A, B, [n(A, N)|_]) :- maplist(strip_label, N, N1), member(B, N1).
+neighbour_al(A, B, [_|AL]) :- neighbour_al(A, B, AL).
+
+strip_label(X/_, X) :- !.
+strip_label(X, X).
 
 
 % 6.03 (*) Cycle from a given node.
@@ -191,4 +194,37 @@ neighbour(A, B, [_|AL]) :- neighbour(A, B, AL).
 % returned to avoid infinite sequences of internally-cycling cycles.
 % Flow pattern: (+, +, ?). G is in adjacency-list form.
 
-cycle(G, A, [A|P]) :- neighbour(A, N, G), path(G, N, A, P).
+cycle(G, A, [A|P]) :- neighbour_al(A, N, G), path(G, N, A, P).
+
+
+% 6.04 (**) Construct all spanning trees
+% Write a predicate s_tree(Graph,Tree) to construct (by backtracking) all
+% spanning trees of a given graph. When you have a correct solution for the
+% s_tree/2 predicate, use it to define two other useful predicates:
+% is_tree(Graph) and is_connected(Graph). Both are five-minutes tasks!
+
+s_tree(G, T) :- graph_term(G, [_|Ns], _, _), s_tree(G, T, Ns).
+
+s_tree(G, T, []) :- !, graph_term(G, _, _, D), graph_term(T, [], [], D).
+s_tree(G, T, Unused) :-
+  select(U, Unused, Unused1),
+  neighbour_gt(N, U, G, E),
+  \+ memberchk(N, Unused1),
+  s_tree(G, T1, Unused1),
+  graph_term(T1, Ns, Es, D),
+  ord_add_all(Ns, [N, U], Ns1),
+  ord_union(Es, [E], Es1),
+  graph_term(T, Ns1, Es1, D).
+
+% True if B is a neighbour of A in the graph G (graph-term form), with E as the
+% edge/arc connecting them.
+neighbour_gt(A, B, G, E) :- graph_term(G, _, Es, _), neighbour_gt_(A, B, Es, E).
+
+neighbour_gt_(A, B, [E|_], E) :-
+  functor(E, e, _), edge_terms(E, _, _, Ns), (Ns=[A, B]; Ns=[B, A]).
+neighbour_gt_(A, B, [E|_], E) :- functor(E, a, _), edge_terms(E, _, _, [A, B]).
+neighbour_gt_(A, B, [_|Es], E) :- neighbour_gt_(A, B, Es, E).
+
+is_tree(G) :- s_tree(G, G).
+
+is_connected(G) :- s_tree(G, _).
