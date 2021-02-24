@@ -203,18 +203,29 @@ cycle(G, A, [A|P]) :- neighbour_al(A, N, G), path(G, N, A, P).
 % s_tree/2 predicate, use it to define two other useful predicates:
 % is_tree(Graph) and is_connected(Graph). Both are five-minutes tasks!
 
-s_tree(G, T) :- graph_term(G, [_|Ns], _, _), s_tree(G, T, Ns).
+s_tree(G, T) :-
+  graph_term(G, Ns, Es, D),
+  Ns = [N|_],
+  s_tree([N], Es, Ns, Es1),    % Ns fails to unify if G is disconnected
+  graph_term(T, Ns, Es1, D).
 
-s_tree(G, T, []) :- !, graph_term(G, _, _, D), graph_term(T, [], [], D).
-s_tree(G, T, Unused) :-
-  select(U, Unused, Unused1),
-  neighbour_gt(N, U, G, E),
-  \+ memberchk(N, Unused1),
-  s_tree(G, T1, Unused1),
-  graph_term(T1, Ns, Es, D),
-  ord_add_all(Ns, [N, U], Ns1),
-  ord_union(Es, [E], Es1),
-  graph_term(T, Ns1, Es1, D).
+s_tree(Seen, Es, Seen2, [E|Es2]) :-
+  select(E, Es, Es1),
+  valid_addition(E, Seen),
+  edge_terms(E, _, _, Ns),
+  ord_add_all(Seen, Ns, Seen1),
+  s_tree(Seen1, Es1, Seen2, Es2).
+s_tree(Seen, Es, Seen, []) :-
+  maplist({Seen}/[E]>>(\+ valid_addition(E, Seen)), Es).
+
+valid_addition(A, Seen) :-
+  functor(A, a, _), !,
+  edge_terms(A, _, _, [P, Q]),
+  ord_memberchk(P, Seen), \+ ord_memberchk(Q, Seen).
+valid_addition(E, Seen) :-
+  edge_terms(E, _, _, [P, Q]),
+  ( ord_memberchk(P, Seen), \+ ord_memberchk(Q, Seen)
+  ; ord_memberchk(Q, Seen), \+ ord_memberchk(P, Seen)).
 
 % True if B is a neighbour of A in the graph G (graph-term form), with E as the
 % edge/arc connecting them.
