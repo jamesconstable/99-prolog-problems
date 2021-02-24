@@ -50,15 +50,13 @@
 % Convert between edge-clause and graph-term forms in either flow order.
 % Edge-clause form cannot encode isolated nodes, so these are lost in the (?, +)
 % flow order.
-ec_gt(ECs, G) :-
-  nonvar(ECs), ECs = [E|_], functor(E, arc, _), !, ec_to_gt(ECs, G, d).
-ec_gt(ECs, G) :- nonvar(ECs), !, ec_to_gt(ECs, G, u).
-ec_gt(ECs, G) :- G = digraph(_, _), !, gt_to_ec(G, ECs, d).
-ec_gt(ECs, G) :- gt_to_ec(G, ECs, u).
+ec_gt(ECs, G) :- nonvar(ECs), !, ec_to_gt(ECs, G, _).
+ec_gt(ECs, G) :- graph_term(G, _, Es, _), maplist(edge_terms, Es, ECs, _, _).
 
 % Convert edge-clause to graph-term.
-ec_to_gt([], G, D) :- graph_term(G, [], [], D).
+ec_to_gt([], G, D) :- (var(D) -> D=u; true), graph_term(G, [], [], D).
 ec_to_gt([Edge|Edges], G, D) :-
+  (functor(Edge, arc, _) -> D=d; D=u),
   ec_to_gt(Edges, G1, D),
   graph_term(G1, N1, E1, _),
   edge_terms(E, Edge, _, UNs),
@@ -67,10 +65,6 @@ ec_to_gt([Edge|Edges], G, D) :-
   ord_union(E1, [E], E2),
   graph_term(G, N2, E2, D).
 
-% Convert graph-term to edge-clause.
-gt_to_ec(G, Edges, _) :-
-  graph_term(G, _, Es, _), maplist(edge_terms, Es, Edges, _, _).
-
 % Convert between (di)graphs and their component terms. The final u/d term flags
 % directedness (necessary when using in the construction flow order).
 graph_term(graph(Ns, Es),   Ns, Es, u).
@@ -78,10 +72,10 @@ graph_term(digraph(Ns, As), Ns, As, d).
 
 % Convert between e/a terms, edge/arc terms, "human-friendly" terms and node
 % lists.
-edge_terms(e(A, B),    edge(A, B),    A-B,   [A, B]).
 edge_terms(e(A, B, C), edge(A, B, C), A-B/C, [A, B]).
-edge_terms(a(A, B),    arc(A, B),     A>B,   [A, B]).
+edge_terms(e(A, B),    edge(A, B),    A-B,   [A, B]).
 edge_terms(a(A, B, C), arc(A, B, C),  A>B/C, [A, B]).
+edge_terms(a(A, B),    arc(A, B),     A>B,   [A, B]).
 
 % Convert between graph-term and adjacency-list forms in either flow order.
 % Note that adjacency-list form doesn't distinguish between graphs and digraphs,
