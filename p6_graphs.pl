@@ -166,6 +166,7 @@ al_hf(AL, HF) :- gt_hf(GT, HF), gt_al(GT, AL).
 % 6.02 (**) Path from one node to another one.
 % Write a predicate path(G, A, B, P) to find an acyclic path P from node A to
 % node B in the graph G. The predicate should return all paths via backtracking.
+
 % Flow pattern: (+, +, +, ?). G is in adjacency-list form.
 
 path(G, A, B, P) :- empty_assoc(S), path(G, A, B, P, S).
@@ -179,3 +180,15 @@ path(G, A, B, [A|P], Seen) :-
 
 neighbour(A, B, [n(A, Ns)|_]) :- member(B, Ns).
 neighbour(A, B, [_|AL]) :- neighbour(A, B, AL).
+
+
+% 6.03 (*) Cycle from a given node.
+% Write a predicate cycle(G, A, P) to find a closed path (cycle) P starting at a
+% given node A in the graph G. The predicate should return all cycles via
+% backtracking.
+
+% Note that only cycles passing through each intermediate node once are
+% returned to avoid infinite sequences of internally-cycling cycles.
+% Flow pattern: (+, +, ?). G is in adjacency-list form.
+
+cycle(G, A, [A|P]) :- neighbour(A, N, G), path(G, N, A, P).
