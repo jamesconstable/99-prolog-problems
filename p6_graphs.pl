@@ -162,3 +162,20 @@ ec_hf(EC, HF) :- gt_hf(GT, HF), ec_gt(EC, GT).
 al_hf(AL, HF) :- nonvar(AL), !, gt_al(GT, AL), gt_hf(GT, HF).
 al_hf(AL, HF) :- gt_hf(GT, HF), gt_al(GT, AL).
 
+
+% 6.02 (**) Path from one node to another one.
+% Write a predicate path(G, A, B, P) to find an acyclic path P from node A to
+% node B in the graph G. The predicate should return all paths via backtracking.
+% Flow pattern: (+, +, +, ?). G is in adjacency-list form.
+
+path(G, A, B, P) :- empty_assoc(S), path(G, A, B, P, S).
+
+path(_, A, A, [A], _) :- !.
+path(G, A, B, [A|P], Seen) :-
+  \+ get_assoc(A, Seen, _), !,
+  put_assoc(A, Seen, true, Seen_),
+  neighbour(A, N, G),
+  path(G, N, B, P, Seen_).
+
+neighbour(A, B, [n(A, Ns)|_]) :- member(B, Ns).
+neighbour(A, B, [_|AL]) :- neighbour(A, B, AL).
