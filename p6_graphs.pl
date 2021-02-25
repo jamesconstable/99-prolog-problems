@@ -203,18 +203,19 @@ cycle(G, A, [A|P]) :- neighbour_al(A, N, G), path(G, N, A, P).
 % s_tree/2 predicate, use it to define two other useful predicates:
 % is_tree(Graph) and is_connected(Graph). Both are five-minutes tasks!
 
-s_tree(G, T) :-
-  graph_term(G, Ns, Es, D),
+s_tree(Graph, Tree) :-
+  graph_term(Graph, Ns, Es, D),
   Ns = [N|_],
   s_tree([N], Es, Ns, Es1),    % Ns fails to unify if G is disconnected
-  graph_term(T, Ns, Es1, D).
+  graph_term(Tree, Ns, Es1, D).
 
-s_tree(Seen, Es, Seen2, [E|Es2]) :-
+s_tree(Seen, Es, Seen2, Es3) :-
   select(E, Es, Es1),
   valid_addition(E, Seen),
   edge_terms(E, _, _, Ns),
   ord_add_all(Seen, Ns, Seen1),
-  s_tree(Seen1, Es1, Seen2, Es2).
+  s_tree(Seen1, Es1, Seen2, Es2),
+  ord_union(Es2, [E], Es3).
 s_tree(Seen, Es, Seen, []) :-
   maplist({Seen}/[E]>>(\+ valid_addition(E, Seen)), Es).
 
@@ -227,6 +228,33 @@ valid_addition(E, Seen) :-
   ( ord_memberchk(P, Seen), \+ ord_memberchk(Q, Seen)
   ; ord_memberchk(Q, Seen), \+ ord_memberchk(P, Seen)).
 
+is_tree(Graph) :- s_tree(Graph, Graph).
+
+is_connected(Graph) :- s_tree(Graph, _).
+
+
+% 6.05 (**) Construct the minimal spanning tree.
+% Write a predicate ms_tree(Graph, Tree, Sum) to construct the minimal spanning
+% tree of a given labelled graph. Hint: Use the algorithm of Prim. A small
+% modification of the solution of 6.04 does the trick.
+
+% On backtracking, this solution produces all other spanning trees in
+% decreasingly minimal order. Flow order: (+, ?, ?).
+
+ms_tree(Graph, Tree, Sum) :-
+  graph_term(Graph, Ns, Es, D),
+  Ns = [N|_],
+  predsort(label_compare, Es, SEs),
+  s_tree([N], SEs, Ns, Es1),
+  graph_term(Tree, Ns, Es1, D),
+  foldl([N, Acc, R]>>(label(N, L), R is Acc + L), Es1, 0, Sum).
+
+label(e(_, _, L), L).
+label(a(_, _, L), L).
+
+label_compare(O, A, B) :- label(A, L1), label(B, L2), compare(O, L1-A, L2-B).
+
+
 % True if B is a neighbour of A in the graph G (graph-term form), with E as the
 % edge/arc connecting them.
 neighbour_gt(A, B, G, E) :- graph_term(G, _, Es, _), neighbour_gt_(A, B, Es, E).
@@ -236,6 +264,3 @@ neighbour_gt_(A, B, [E|_], E) :-
 neighbour_gt_(A, B, [E|_], E) :- functor(E, a, _), edge_terms(E, _, _, [A, B]).
 neighbour_gt_(A, B, [_|Es], E) :- neighbour_gt_(A, B, Es, E).
 
-is_tree(G) :- s_tree(G, G).
-
-is_connected(G) :- s_tree(G, _).
