@@ -255,12 +255,60 @@ label(a(_, _, L), L).
 label_compare(O, A, B) :- label(A, L1), label(B, L2), compare(O, L1-A, L2-B).
 
 
-% True if B is a neighbour of A in the graph G (graph-term form), with E as the
-% edge/arc connecting them.
-neighbour_gt(A, B, G, E) :- graph_term(G, _, Es, _), neighbour_gt_(A, B, Es, E).
+% 6.06 (**) Graph isomorphism.
+% Two graphs G1(N1, E1) and G2(N2, E2) are isomorphic if there is a bijection
+% f: N1 -> N2 such that for any nodes X, Y of N1, X and Y are adjacent if and
+% only if f(X) and f(Y) are adjacent.
 
-neighbour_gt_(A, B, [E|_], E) :-
-  functor(E, e, _), edge_terms(E, _, _, Ns), (Ns=[A, B]; Ns=[B, A]).
-neighbour_gt_(A, B, [E|_], E) :- functor(E, a, _), edge_terms(E, _, _, [A, B]).
-neighbour_gt_(A, B, [_|Es], E) :- neighbour_gt_(A, B, Es, E).
+% Write a predicate that determines whether two graphs are isomorphic. Hint: Use
+% an open-ended list to represent the function f.
 
+isomorphic(A, B) :- isomorphic(A, B, _).
+
+isomorphic(A, B, []) :- graph_term(A, [], [], D), graph_term(B, [], [], D).
+isomorphic(A, B, [AN=BN|I]) :-
+  graph_term(A, [AN|ANs], [], D), graph_term(B, BNs, [], D),
+  select(BN, BNs, BNs1),
+  graph_term(A1, ANs, [], D), graph_term(B1, BNs1, [], D),
+  isomorphic(A1, B1, I).
+isomorphic(A, B, I1) :-
+  graph_term(A, ANs, [AE|AEs], D), graph_term(B, BNs, BEs, D),
+  select(BE, BEs, BEs1),
+  edge_terms(AE, _, _, AENs),
+  ord_del_all(ANs, AENs, ANs1),
+  edge_terms(BE, _, _, BENs),
+  ord_del_all(BNs, BENs, BNs1),
+  graph_term(A1, ANs1, AEs, D), graph_term(B1, BNs1, BEs1, D),
+  isomorphic(A1, B1, I),
+  equate(AE, BE, I, I1).
+
+ord_del_all(S1, Es, S2) :-
+  foldl([E, S1, S2]>>ord_del_element(S1, E, S2), Es, S1, S2).
+
+equate(A, B, I, I) :-
+  functor(A, a, _),
+  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
+  bound(A1=B1, I), bound(A2=B2, I), !.
+equate(A, B, I, [A2=B2|I]) :-
+  functor(A, a, _),
+  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
+  bound(A1=B1, I), free(A2=B2, I), !.
+equate(A, B, I, [A1=B1|I]) :-
+  functor(A, a, _),
+  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
+  free(A1=B1, I), bound(A2=B2, I), !.
+equate(A, B, I, [A1=B1, A2=B2|I]) :-
+  functor(A, a, _),
+  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
+  free(A1=B1, I), free(A2=B2, I).
+equate(A, B, I, I1) :-
+  functor(A, e, _),
+  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
+  equate(a(A1, A2), a(B1, B2), I, I1).
+equate(A, B, I, I1) :-
+  functor(A, e, _),
+  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
+  equate(a(A1, A2), a(B2, B1), I, I1).
+
+bound(A=B, I) :- memberchk(A=B, I).
+free(A=B, I) :- \+ bound(A=_, I), \+ bound(_=B, I).
