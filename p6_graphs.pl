@@ -291,3 +291,41 @@ equate_edge(e, [A1, A2], [B1, B2], I) :- equate(A1, B2, I), equate(A2, B1, I).
 
 equate(A, B, I) :- memberchk(A=X, I), nonvar(X), !, X = B.
 equate(A, B, I) :- memberchk(X=B, I), X = A.
+
+
+% 6.07 (**) Node degree and graph coloration.
+% a) Write a predicate degree(Graph, Node, Deg) that determines the degree of a
+%    given node.
+% b) Write a predicate that generates a list of all nodes of a graph sorted
+%    according to decreasing degree.
+% c) Use Welch-Powell's algorithm to paint the nodes of a graph in such a way
+%    that adjacent nodes have different colors.
+
+% Graph must be in adjacency-list form.
+degree(Graph, Node, Deg) :- memberchk(n(Node, Ns), Graph), length(Ns, Deg).
+
+degree_sort(Graph, Sorted) :- predsort(degree_compare, Graph, Sorted).
+
+degree_compare(O, n(A, N1), n(B, N2)) :-
+  length(N1, L1), length(N2, L2), C1 is -L1, C2 is -L2, compare(O, C1-A, C2-B).
+
+% Graph is in adjacency-list form and Coloring is an open-ended list of node
+% name - color variable pairs. The color variables are correctly correlated for
+% unification but left underspecified as there's no upper bound on the number of
+% colors needed. Flow order: (+, ?).
+welch_powell(Graph, Coloring) :-
+  degree_sort(Graph, Sorted), welch_powell_(Sorted, Coloring), !.
+
+welch_powell_([], _).
+welch_powell_(Graph, Coloring) :-
+  apply_color(Graph, Graph2, Coloring, _), welch_powell_(Graph2, Coloring).
+
+apply_color(G1, G2, Coloring, C) :- apply_color(G1, G2, Coloring, C, []).
+
+apply_color([], [], _, _, _).
+apply_color([n(N, Es)|As], [n(N, Es)|As1], Coloring, C, Cs) :-
+  member(E, Es), memberchk(E, Cs), !,
+  apply_color(As, As1, Coloring, C, Cs).
+apply_color([n(N, _)|As], As1, Coloring, C, Cs) :-
+  memberchk(N-C, Coloring),
+  apply_color(As, As1, Coloring, C, [N|Cs]).
