@@ -264,51 +264,30 @@ label_compare(O, A, B) :- label(A, L1), label(B, L2), compare(O, L1-A, L2-B).
 % an open-ended list to represent the function f.
 
 isomorphic(A, B) :- isomorphic(A, B, _).
+isomorphic(A, B, I) :-
+  graph_term(A, ANs, AEs, _),
+  graph_term(B, BNs, BEs, _),
+  isomorphic_(ANs, AEs, BNs, BEs, I).
 
-isomorphic(A, B, []) :- graph_term(A, [], [], D), graph_term(B, [], [], D).
-isomorphic(A, B, [AN=BN|I]) :-
-  graph_term(A, [AN|ANs], [], D), graph_term(B, BNs, [], D),
+isomorphic_([], [], [], [], _).
+isomorphic_([AN|ANs], [], BNs, [], I) :-
   select(BN, BNs, BNs1),
-  graph_term(A1, ANs, [], D), graph_term(B1, BNs1, [], D),
-  isomorphic(A1, B1, I).
-isomorphic(A, B, I1) :-
-  graph_term(A, ANs, [AE|AEs], D), graph_term(B, BNs, BEs, D),
+  equate(AN, BN, I),
+  isomorphic_(ANs, [], BNs1, [], I).
+isomorphic_(ANs, [AE|AEs], BNs, BEs, I) :-
   select(BE, BEs, BEs1),
-  edge_terms(AE, _, _, AENs),
-  ord_del_all(ANs, AENs, ANs1),
-  edge_terms(BE, _, _, BENs),
-  ord_del_all(BNs, BENs, BNs1),
-  graph_term(A1, ANs1, AEs, D), graph_term(B1, BNs1, BEs1, D),
-  isomorphic(A1, B1, I),
-  equate(AE, BE, I, I1).
+  equate_edge(AE, BE, I),
+  isomorphic_(ANs, AEs, BNs, BEs1, I).
 
-ord_del_all(S1, Es, S2) :-
-  foldl([E, S1, S2]>>ord_del_element(S1, E, S2), Es, S1, S2).
+equate_edge(A, B, I) :-
+  functor(A, F, _),
+  edge_terms(A, _, _, As),
+  edge_terms(B, _, _, Bs),
+  equate_edge(F, As, Bs, I).
 
-equate(A, B, I, I) :-
-  functor(A, a, _),
-  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
-  bound(A1=B1, I), bound(A2=B2, I), !.
-equate(A, B, I, [A2=B2|I]) :-
-  functor(A, a, _),
-  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
-  bound(A1=B1, I), free(A2=B2, I), !.
-equate(A, B, I, [A1=B1|I]) :-
-  functor(A, a, _),
-  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
-  free(A1=B1, I), bound(A2=B2, I), !.
-equate(A, B, I, [A1=B1, A2=B2|I]) :-
-  functor(A, a, _),
-  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
-  free(A1=B1, I), free(A2=B2, I).
-equate(A, B, I, I1) :-
-  functor(A, e, _),
-  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
-  equate(a(A1, A2), a(B1, B2), I, I1).
-equate(A, B, I, I1) :-
-  functor(A, e, _),
-  edge_terms(A, _, _, [A1,A2]), edge_terms(B, _, _, [B1,B2]),
-  equate(a(A1, A2), a(B2, B1), I, I1).
+equate_edge(a, [A1, A2], [B1, B2], I) :- equate(A1, B1, I), equate(A2, B2, I).
+equate_edge(e, [A1, A2], [B1, B2], I) :- equate(A1, B1, I), equate(A2, B2, I).
+equate_edge(e, [A1, A2], [B1, B2], I) :- equate(A1, B2, I), equate(A2, B1, I).
 
-bound(A=B, I) :- memberchk(A=B, I).
-free(A=B, I) :- \+ bound(A=_, I), \+ bound(_=B, I).
+equate(A, B, I) :- memberchk(A=X, I), nonvar(X), !, X = B.
+equate(A, B, I) :- memberchk(X=B, I), X = A.
