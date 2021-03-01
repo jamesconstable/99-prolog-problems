@@ -338,14 +338,17 @@ apply_color([n(N, _)|As], As1, Coloring, C, Cs) :-
 
 dfs(Graph, Start, Order) :- dfs(Graph, Start, Order, Order, []).
 
-dfs(_, Start, Seen, SeenHole, SeenHole) :- memberchk_dlist(Start, Seen), !.
 dfs(Graph, Start, Seen, SeenHoleI, SeenHoleO) :-
   memberchk(n(Start, Ns), Graph),
   SeenHoleI = [Start|SeenHole1],
   dfs_neighbours(Graph, Ns, Seen, SeenHole1, SeenHoleO).
 
-dfs_neighbours(_, [], _, S, S).
 dfs_neighbours(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
+  exclude({Seen}/[N]>>memberchk_dlist(N, Seen), Ns, UnseenNs),
+  dfs_neighbours_(Graph, UnseenNs, Seen, SeenHoleI, SeenHoleO).
+
+dfs_neighbours_(_, [], _, S, S) :- !.
+dfs_neighbours_(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
   select(N, Ns, Ns1),
   dfs(Graph, N, Seen, SeenHoleI, SeenHole1),
   dfs_neighbours(Graph, Ns1, Seen, SeenHole1, SeenHoleO).
