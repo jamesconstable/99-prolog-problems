@@ -336,22 +336,22 @@ apply_color([n(N, _)|As], As1, Coloring, C, Cs) :-
 % The starting point should be specified, and the output should be a list of
 % nodes that are reachable from this starting point (in depth-first order).
 
-dfs(Graph, Start, Order) :- dfs(Graph, Start, Order, Order, []).
+dfs(Graph, Start, Order) :- visit_node(Graph, Start, Order, Order, []).
 
-dfs(Graph, Start, Seen, SeenHoleI, SeenHoleO) :-
+dfs(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
+  exclude({Seen}/[N]>>memberchk_dlist(N, Seen), Ns, UnseenNs),
+  dfs_(Graph, UnseenNs, Seen, SeenHoleI, SeenHoleO).
+
+dfs_(_, [], _, S, S) :- !.
+dfs_(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
+  select(N, Ns, Ns1),
+  visit_node(Graph, N, Seen, SeenHoleI, SeenHole1),
+  dfs(Graph, Ns1, Seen, SeenHole1, SeenHoleO).
+
+visit_node(Graph, Start, Seen, SeenHoleI, SeenHoleO) :-
   memberchk(n(Start, Ns), Graph),
   SeenHoleI = [Start|SeenHole1],
-  dfs_neighbours(Graph, Ns, Seen, SeenHole1, SeenHoleO).
+  dfs(Graph, Ns, Seen, SeenHole1, SeenHoleO).
 
-dfs_neighbours(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
-  exclude({Seen}/[N]>>memberchk_dlist(N, Seen), Ns, UnseenNs),
-  dfs_neighbours_(Graph, UnseenNs, Seen, SeenHoleI, SeenHoleO).
-
-dfs_neighbours_(_, [], _, S, S) :- !.
-dfs_neighbours_(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
-  select(N, Ns, Ns1),
-  dfs(Graph, N, Seen, SeenHoleI, SeenHole1),
-  dfs_neighbours(Graph, Ns1, Seen, SeenHole1, SeenHoleO).
-
-memberchk_dlist(M, [M|_]) :- !.
+memberchk_dlist(M, [H|_]) :- nonvar(H), M=H, !.
 memberchk_dlist(M, [_|L]) :- nonvar(L), memberchk_dlist(M, L).
