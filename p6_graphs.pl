@@ -298,7 +298,7 @@ equate(A, B, I) :- memberchk(X=B, I), X = A.
 %    given node.
 % b) Write a predicate that generates a list of all nodes of a graph sorted
 %    according to decreasing degree.
-% c) Use Welch-Powell's algorithm to paint the nodes of a graph in such a way
+% c) Use Welsh-Powell's algorithm to paint the nodes of a graph in such a way
 %    that adjacent nodes have different colors.
 
 % Graph must be in adjacency-list form.
@@ -313,12 +313,12 @@ degree_compare(O, n(A, N1), n(B, N2)) :-
 % name - color variable pairs. The color variables are correctly correlated for
 % unification but left underspecified as there's no upper bound on the number of
 % colors needed. Flow order: (+, ?).
-welch_powell(Graph, Coloring) :-
-  degree_sort(Graph, Sorted), welch_powell_(Sorted, Coloring), !.
+welsh_powell(Graph, Coloring) :-
+  degree_sort(Graph, Sorted), welsh_powell_(Sorted, Coloring), !.
 
-welch_powell_([], _).
-welch_powell_(Graph, Coloring) :-
-  apply_color(Graph, Graph2, Coloring, _), welch_powell_(Graph2, Coloring).
+welsh_powell_([], _).
+welsh_powell_(Graph, Coloring) :-
+  apply_color(Graph, Graph2, Coloring, _), welsh_powell_(Graph2, Coloring).
 
 apply_color(G1, G2, Coloring, C) :- apply_color(G1, G2, Coloring, C, []).
 
@@ -329,3 +329,26 @@ apply_color([n(N, Es)|As], [n(N, Es)|As1], Coloring, C, Cs) :-
 apply_color([n(N, _)|As], As1, Coloring, C, Cs) :-
   memberchk(N-C, Coloring),
   apply_color(As, As1, Coloring, C, [N|Cs]).
+
+
+% 6.08 (**) Depth-first order graph traversal.
+% Write a predicate that generates a depth-first order graph traversal sequence.
+% The starting point should be specified, and the output should be a list of
+% nodes that are reachable from this starting point (in depth-first order).
+
+dfs(Graph, Start, Order) :- dfs(Graph, Start, Order, Order, []).
+
+dfs(_, Start, Seen, SeenHole, SeenHole) :- memberchk_dlist(Start, Seen), !.
+dfs(Graph, Start, Seen, SeenHoleI, SeenHoleO) :-
+  memberchk(n(Start, Ns), Graph),
+  SeenHoleI = [Start|SeenHole1],
+  dfs_neighbours(Graph, Ns, Seen, SeenHole1, SeenHoleO).
+
+dfs_neighbours(_, [], _, S, S).
+dfs_neighbours(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
+  select(N, Ns, Ns1),
+  dfs(Graph, N, Seen, SeenHoleI, SeenHole1),
+  dfs_neighbours(Graph, Ns1, Seen, SeenHole1, SeenHoleO).
+
+memberchk_dlist(M, [M|_]) :- !.
+memberchk_dlist(M, [_|L]) :- nonvar(L), memberchk_dlist(M, L).
