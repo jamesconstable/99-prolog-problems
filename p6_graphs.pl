@@ -336,22 +336,55 @@ apply_color([n(N, _)|As], As1, Coloring, C, Cs) :-
 % The starting point should be specified, and the output should be a list of
 % nodes that are reachable from this starting point (in depth-first order).
 
+% Graph is in adjacency-list format. Flow order: (+, +, ?).
+
 dfs(Graph, Start, Order) :- visit_node(Graph, Start, Order, Order, []).
-
-dfs(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
-  exclude({Seen}/[N]>>memberchk_dlist(N, Seen), Ns, UnseenNs),
-  dfs_(Graph, UnseenNs, Seen, SeenHoleI, SeenHoleO).
-
-dfs_(_, [], _, S, S) :- !.
-dfs_(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
-  select(N, Ns, Ns1),
-  visit_node(Graph, N, Seen, SeenHoleI, SeenHole1),
-  dfs(Graph, Ns1, Seen, SeenHole1, SeenHoleO).
 
 visit_node(Graph, Start, Seen, SeenHoleI, SeenHoleO) :-
   memberchk(n(Start, Ns), Graph),
   SeenHoleI = [Start|SeenHole1],
-  dfs(Graph, Ns, Seen, SeenHole1, SeenHoleO).
+  visit_neighbours(Graph, Ns, Seen, SeenHole1, SeenHoleO).
 
-memberchk_dlist(M, [H|_]) :- nonvar(H), M=H, !.
-memberchk_dlist(M, [_|L]) :- nonvar(L), memberchk_dlist(M, L).
+visit_neighbours(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
+  exclude({Seen}/[N]>>memberchk_dl(N, Seen), Ns, UnseenNs),
+  visit_neighbours_(Graph, UnseenNs, Seen, SeenHoleI, SeenHoleO).
+
+visit_neighbours_(_, [], _, S, S) :- !.
+visit_neighbours_(Graph, Ns, Seen, SeenHoleI, SeenHoleO) :-
+  select(N, Ns, Ns1),
+  visit_node(Graph, N, Seen, SeenHoleI, SeenHole1),
+  visit_neighbours(Graph, Ns1, Seen, SeenHole1, SeenHoleO).
+
+memberchk_dl(M, [H|_]) :- nonvar(H), M=H, !.
+memberchk_dl(M, [_|L]) :- nonvar(L), memberchk_dl(M, L).
+
+
+% 6.09 (**) Connected components.
+% Write a predicate that splits a grpah into its connected components.
+
+connected_components([], []).
+connected_components([N|Ns], [Connected|Components]) :-
+  select_connected(N, Ns, Connected, Ns1),
+  close_dl(Connected),
+  connected_components(Ns1, Components).
+
+select_connected(n(N, Ns), AL, Connected, AL1).
+
+close_dl(X) :- var(X), !, X=[].
+close_dl([_|X]) :- close_dl(X).
+
+
+% 6.10 (**) Bipartite graphs
+% Write a predicate that finds out whether a given graph is bipartite.
+
+is_bipartite(G) :- chromatic_number(G, N), N =< 2.
+
+chromatic_number(G, N) :- welsh_powell(G, C), close_dl(C), count_colors(C, N).
+
+count_colors(Coloring, N) :- count_colors(Coloring, 0, N).
+
+count_colors([], Count, Count).
+count_colors([_-Color|Cs], Count, N) :-
+  nonvar(Color), !, count_colors(Cs, Count, N).
+count_colors([_-Color|Cs], Count, N) :-
+  Count1 is Count+1, Color = Count1, count_colors(Cs, Count1, N).
