@@ -375,7 +375,7 @@ split_graph([A|AL], Keep, [A|G1], G2) :-
 split_graph([A|AL], Keep, G1, [A|G2]) :- split_graph(AL, Keep, G1, G2).
 
 
-% 6.10 (**) Bipartite graphs
+% 6.10 (**) Bipartite graphs.
 % Write a predicate that finds out whether a given graph is bipartite.
 
 is_bipartite(Graph) :-
@@ -394,3 +394,38 @@ count_colors([_-Color|Cs], Count, N) :-
 
 close_dl(X) :- var(X), !, X=[].
 close_dl([_|X]) :- close_dl(X).
+
+
+% 6.11 (***) Generate K-regular simple graphs with N nodes.
+% In a K-regular graph all nodes have a degree of K; i.e. the number of edges
+% incident in each node is K. How many (non-isomorphic!) 3-regular graphs with
+% 6 nodes are there?
+
+:- dynamic k_regular_solution/3.
+
+k_regular(K, N, Graph) :- k_regular_solution(K, N, Graph).
+k_regular(K, N, Graph) :-
+  init_saturation(N, S),
+  generate(K, Graph, S, _),
+  check_not_found(K, N, Graph),
+  assertz(k_regular_solution(K, N, Graph)).
+
+init_saturation(N, NDs) :- numlist(1, N, G), maplist([X, R]>>(R=X-0), G, NDs).
+
+available_edge(N1-N2, [N1-D1|NDs], [N1-D1_, N2-D2_|NDs1]) :-
+  select(N2-D2, NDs, NDs1), D1_ is D1+1, D2_ is D2+1.
+
+generate(_, [], [], _).
+generate(K, [N1-N2|Es], S, Acc) :-
+  available_edge(N1-N2, S, S1),
+  \+ memberchk_dl(N1-N2, Acc),
+  \+ memberchk_dl(N2-N1, Acc),
+  memberchk(N1-N2, Acc),
+  include({K}/[_-D]>>(D < K), S1, S2),
+  generate(K, Es, S2, Acc).
+
+check_not_found(K, N, G) :- \+ (
+  k_regular_solution(K, N, CompareG),
+  gt_hf(CompareG_GT, CompareG),
+  gt_hf(G_GT, G),
+  isomorphic(G_GT, CompareG_GT)).
