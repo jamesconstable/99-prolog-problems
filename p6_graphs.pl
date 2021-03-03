@@ -360,24 +360,27 @@ memberchk_dl(M, [_|L]) :- nonvar(L), memberchk_dl(M, L).
 
 
 % 6.09 (**) Connected components.
-% Write a predicate that splits a grpah into its connected components.
+% Write a predicate that splits a graph into its connected components.
 
 connected_components([], []).
-connected_components([N|Ns], [Connected|Components]) :-
-  select_connected(N, Ns, Connected, Ns1),
-  close_dl(Connected),
-  connected_components(Ns1, Components).
+connected_components(Graph, [G1|Components]) :-
+  Graph = [n(Start, _)|_],
+  dfs(Graph, Start, Reachable), !,
+  split_graph(Graph, Reachable, G1, G2),
+  connected_components(G2, Components).
 
-select_connected(n(N, Ns), AL, Connected, AL1).
-
-close_dl(X) :- var(X), !, X=[].
-close_dl([_|X]) :- close_dl(X).
+split_graph([], _, [], []).
+split_graph([A|AL], Keep, [A|G1], G2) :-
+  A = n(N, _), memberchk(N, Keep), !, split_graph(AL, Keep, G1, G2).
+split_graph([A|AL], Keep, G1, [A|G2]) :- split_graph(AL, Keep, G1, G2).
 
 
 % 6.10 (**) Bipartite graphs
 % Write a predicate that finds out whether a given graph is bipartite.
 
-is_bipartite(G) :- chromatic_number(G, N), N =< 2.
+is_bipartite(Graph) :-
+  connected_components(Graph, Gs),
+  maplist([G]>>(chromatic_number(G, N), N =< 2), Gs).
 
 chromatic_number(G, N) :- welsh_powell(G, C), close_dl(C), count_colors(C, N).
 
@@ -388,3 +391,6 @@ count_colors([_-Color|Cs], Count, N) :-
   nonvar(Color), !, count_colors(Cs, Count, N).
 count_colors([_-Color|Cs], Count, N) :-
   Count1 is Count+1, Color = Count1, count_colors(Cs, Count1, N).
+
+close_dl(X) :- var(X), !, X=[].
+close_dl([_|X]) :- close_dl(X).
