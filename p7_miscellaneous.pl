@@ -37,17 +37,17 @@ attacking(X1/Y1, X2/Y2) :- abs(X1-X2) =:= abs(Y1-Y2).  % Same diagonal
 % And finally, represent the solution of our problem as a list of N*N knight
 % positions (the knight's tour).
 
-knights_tour(N, Start, Tour) :-
-  list_to_assoc([Start-_], Visited),
-  knights_tour(N, Start, Tour, [], Visited, 1).
+% This implementation is mysteriously faster than the equivalent using assocs
+% for checking visitedness. Maybe they just have a very high constant overhead?
 
-knights_tour(N, Current, [Current|Tour], Tour, _, Step) :- Step =:= N*N.
-knights_tour(N, Current, [Current|Tour], TourH, Visited, Step) :-
+knights_tour(N, Start, Tour) :- knights_tour(N, Start, Tour, Tour, _, 1).
+
+knights_tour(N, Current, _, [Current], _, Step) :- Step =:= N*N.
+knights_tour(N, Current, Tour, [Current|Tour1], Tour2, Step) :-
   jump(N, Current, Next),
-  \+ get_assoc(Next, Visited, _),
-  put_assoc(Next, Visited, _, Visited1),
+  \+ memberchk_dl(Next, Tour),
   Step1 is Step + 1,
-  knights_tour(N, Next, Tour, TourH, Visited1, Step1).
+  knights_tour(N, Next, Tour, Tour1, Tour2, Step1).
 
 jump(N, X/Y, U/V) :-
   jump_delta(DX/DY),
@@ -57,3 +57,6 @@ jump(N, X/Y, U/V) :-
 
 jump_delta(X/Y) :- member(X, [-2, 2]), member(Y, [-1, 1]).
 jump_delta(X/Y) :- member(X, [-1, 1]), member(Y, [-2, 2]).
+
+memberchk_dl(M, [H|_]) :- nonvar(H), M=H, !.
+memberchk_dl(M, [_|L]) :- nonvar(L), memberchk_dl(M, L).
