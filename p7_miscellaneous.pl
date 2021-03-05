@@ -24,3 +24,36 @@ n_queens(N, X, [Y|Ys]) :-
 attacking(_/Y, _/Y) :- !.                              % Same row
 attacking(X/_, X/_) :- !.                              % Same column
 attacking(X1/Y1, X2/Y2) :- abs(X1-X2) =:= abs(Y1-Y2).  % Same diagonal
+
+
+% 7.02 (**) Knight's tour.
+% Another famous problem is this one: How can a knight jump on an NxN chessboard
+% in such a way that it visits every square exactly once?
+
+% Hints: Represent the squares by pairs of their coordinates of the form X/Y,
+% where both X and Y are integers between 1 and N. (Note that '/' is just a 
+% convenient functor, not division!) Define the relation jump(N, X/Y, U/V) to
+% express the fact that a knight can jump from X/Y to U/V on a NxN chessboard.
+% And finally, represent the solution of our problem as a list of N*N knight
+% positions (the knight's tour).
+
+knights_tour(N, Start, Tour) :-
+  list_to_assoc([Start-_], Visited),
+  knights_tour(N, Start, Tour, [], Visited, 1).
+
+knights_tour(N, Current, [Current|Tour], Tour, _, Step) :- Step =:= N*N.
+knights_tour(N, Current, [Current|Tour], TourH, Visited, Step) :-
+  jump(N, Current, Next),
+  \+ get_assoc(Next, Visited, _),
+  put_assoc(Next, Visited, _, Visited1),
+  Step1 is Step + 1,
+  knights_tour(N, Next, Tour, TourH, Visited1, Step1).
+
+jump(N, X/Y, U/V) :-
+  jump_delta(DX/DY),
+  U is X+DX, V is Y+DY,
+  0 < U, U =< N,
+  0 < V, V =< N.
+
+jump_delta(X/Y) :- member(X, [-2, 2]), member(Y, [-1, 1]).
+jump_delta(X/Y) :- member(X, [-1, 1]), member(Y, [-2, 2]).
