@@ -60,3 +60,26 @@ jump_delta(X/Y) :- member(X, [-1, 1]), member(Y, [-2, 2]).
 
 memberchk_dl(M, [H|_]) :- nonvar(H), M=H, !.
 memberchk_dl(M, [_|L]) :- nonvar(L), memberchk_dl(M, L).
+
+
+% 7.05 (**) English number words.
+% On financial documents, like cheques, numbers must sometimes be written in
+% full words. Example: 175 must be written as one-seven-five. Write a predicate
+% full_words/1 to print (non-negative) integer numbers in full words.
+
+full_words(N) :-
+  atom_chars(N, Cs),
+  maplist([C, W]>>(digit_word(C, W)), Cs, Ws),
+  atomic_list_concat(Ws, '-', Output),
+  writeln(Output).
+
+digit_word('0', zero).
+digit_word('1', one).
+digit_word('2', two).
+digit_word('3', three).
+digit_word('4', four).
+digit_word('5', five).
+digit_word('6', six).
+digit_word('7', seven).
+digit_word('8', eight).
+digit_word('9', nine).
