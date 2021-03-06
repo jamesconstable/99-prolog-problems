@@ -182,3 +182,86 @@ identifier_start([C|Cs]) :- char_type(C, alpha), identifier_cont(Cs).
 identifier_cont([]).
 identifier_cont(['_',C|Cs]) :- !, char_type(C, alnum), identifier_cont(Cs).
 identifier_cont([C|Cs]) :- char_type(C, alnum), identifier_cont(Cs).
+
+
+% 7.07 (**) Sudoku.
+% Sudoku puzzles go like this:
+%   Problem statement                Solution
+%   .  .  4 | 8  .  . | .  1  7      9  3  4 | 8  2  5 | 6  1  7
+%           |         |                      |         |
+%   6  7  . | 9  .  . | .  .  .      6  7  2 | 9  1  4 | 8  5  3
+%           |         |                      |         |
+%   5  .  8 | .  3  . | .  .  4      5  1  8 | 6  3  7 | 9  2  4
+%   --------+---------+--------      --------+---------+--------
+%   3  .  . | 7  4  . | 1  .  .      3  2  5 | 7  4  8 | 1  6  9
+%           |         |                      |         |
+%   .  6  9 | .  .  . | 7  8  .      4  6  9 | 1  5  3 | 7  8  2
+%           |         |                      |         |
+%   .  .  1 | .  6  9 | .  .  5      7  8  1 | 2  6  9 | 4  3  5
+%   --------+---------+--------      --------+---------+--------
+%   1  .  . | .  8  . | 3  .  6      1  9  7 | 5  8  2 | 3  4  6
+%           |         |                      |         |
+%   .  .  . | .  .  6 | .  9  1      8  5  3 | 4  7  6 | 2  9  1
+%           |         |                      |         |
+%   2  4  . | .  .  1 | 5  .  .      2  4  6 | 3  9  1 | 5  7  8
+
+% Every spot in the puzzle belongs to a (horizontal) row and a (vertical)
+% column, as well as to one single 3x3 square (which we call "square" for
+% short). At the beginning, some of the spots carry a single-digit number
+% between 1 and 9. The problem is to fill the missing spots with digits in such
+% a way that every number between 1 and 9 appears exactly once in each row, in
+% each column, and in each square.
+
+sudoku_solve(Puzzle, Solved) :-
+  sudoku_list_to_cells(Puzzle, Fixed, Empties),
+  sudoku_solve(Empties, Fixed, Solved).
+
+sudoku_solve([], Fixed, Fixed).
+sudoku_solve([E|Es], Fixed, S) :-
+  between(1, 9, V), valid_cell(V-E, Fixed), sudoku_solve(Es, [V-E|Fixed], S).
+
+valid_cell(V-P, Cells) :- \+ (member(V-P1, Cells), same_neighbourhood(P, P1)).
+
+same_neighbourhood(C1, C2) :-
+  same_column(C1, C2); same_row(C1, C2); same_square(C1, C2).
+
+same_column(X/_, X/_).
+same_row(_/Y, _/Y).
+same_square(C1, C2) :- square(C1, Square), square(C2, Square).
+
+square(X/Y, XS/YS) :- XS is X // 3, YS is Y // 3.
+
+sudoku_list_to_cells(Vs, F, E) :- sudoku_list_to_cells(Vs, F, E, 0, 0).
+
+sudoku_list_to_cells([], [], [], _, _).
+sudoku_list_to_cells([V|Vs], Fixed, [X/Y|Empties], X, Y) :-
+  var(V), !,
+  increment(X, Y, X1, Y1),
+  sudoku_list_to_cells(Vs, Fixed, Empties, X1, Y1).
+sudoku_list_to_cells([V|Vs], [V-X/Y|Fixed], Empties, X, Y) :-
+  increment(X, Y, X1, Y1),
+  sudoku_list_to_cells(Vs, Fixed, Empties, X1, Y1).
+
+increment(X, Y, X1, Y1) :- R is Y*9+X+1, X1 is R mod 9, Y1 is R // 9.
+
+write_sudoku(Cells) :-
+  predsort([O, _-X1/Y1, _-X2/Y2]>>compare(O, Y1/X1, Y2/X2), Cells, CellsSorted),
+  write_sudoku(CellsSorted, 0), nl.
+
+write_sudoku([], _).
+write_sudoku(Cells, 9) :- nl, write_sudoku(Cells, 0), !.
+write_sudoku([C-_|Cs], X) :- write(C), tab(1), X1 is X+1, write_sudoku(Cs, X1).
+
+% Sample puzzle
+puzzle([
+  _,_,4, 8,_,_, _,1,7,
+  6,7,_, 9,_,_, _,_,_,
+  5,_,8, _,3,_, _,_,4,
+
+  3,_,_, 7,4,_, 1,_,_,
+  _,6,9, _,_,_, 7,8,_,
+  _,_,1, _,6,9, _,_,5,
+
+  1,_,_, _,8,_, 3,_,6,
+  _,_,_, _,_,6, _,9,1,
+  2,4,_, _,_,1, 5,_,_]).
