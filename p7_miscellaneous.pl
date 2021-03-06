@@ -117,6 +117,32 @@ map_edge(_, _, E, E).
 
 fully_mapped(m(_, _, nil)).
 
+
+% 7.04 (***) An arithmetic puzzle.
+% Given a list of integer numbers, find a correct way of inserting arithmetic
+% signs (operators) such that the result is a correct equation.
+
+% Example: Given the list of numbers [2, 3, 5, 7, 11], we can form the equations
+% 2 - 3 + 5 + 7 = 11, 2 = (3 * 5 + 7) / 11, and ten others!
+
+atoms_equation(Ns, LExpr = RExpr) :-
+  non_empty_append(LHS, RHS, Ns),
+  atoms_expr_tree(LHS, LExpr),
+  atoms_expr_tree(RHS, RExpr),
+  LExpr =:= RExpr.
+
+atoms_expr_tree([N], N).
+atoms_expr_tree(Ns, Expr) :-
+  non_empty_append(LNs, RNs, Ns),
+  atoms_expr_tree(LNs, LExpr),
+  atoms_expr_tree(RNs, RExpr),
+  member(Op, [+, -, *, /]),
+  Expr =.. [Op, LExpr, RExpr].
+
+non_empty_append(A, B, C) :-
+  append(A, B, C), length(A, AL), AL > 0, length(B, BL), BL > 0.
+
+
 % 7.05 (**) English number words.
 % On financial documents, like cheques, numbers must sometimes be written in
 % full words. Example: 175 must be written as one-seven-five. Write a predicate
