@@ -139,8 +139,7 @@ atoms_expr_tree(Ns, Expr) :-
   member(Op, [+, -, *, /]),
   Expr =.. [Op, LExpr, RExpr].
 
-non_empty_append(A, B, C) :-
-  append(A, B, C), length(A, AL), AL > 0, length(B, BL), BL > 0.
+non_empty_append(A, B, C) :- append(A, B, C), A = [_|_], B = [_|_].
 
 
 % 7.05 (**) English number words.
@@ -164,3 +163,22 @@ digit_word('6', six).
 digit_word('7', seven).
 digit_word('8', eight).
 digit_word('9', nine).
+
+
+% 7.06 (**) Syntax checker.
+% In a certain programming language (Ada) identifiers are defined by the syntax
+% diagram (railroad chart) at:
+% https://sites.google.com/site/prologsite/prolog-problems/7/p96.gif
+
+% Transform the syntax diagram into a system of syntax diagrams which do not
+% contain loops; i.e. which are purely recursive. Using these modified diagrams,
+% write a predicate identifier/1 that can check whether or not a given string is
+% a legal identifier.
+
+identifier(Str) :- atom_chars(Str, Cs), identifier_start(Cs).
+
+identifier_start([C|Cs]) :- char_type(C, alpha), identifier_cont(Cs).
+
+identifier_cont([]).
+identifier_cont(['_',C|Cs]) :- !, char_type(C, alnum), identifier_cont(Cs).
+identifier_cont([C|Cs]) :- char_type(C, alnum), identifier_cont(Cs).
