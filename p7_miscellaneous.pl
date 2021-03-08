@@ -411,3 +411,36 @@ nonogram_puzzle(
   'Hen',
   [[3], [2,1], [3,2], [2,2], [6], [1,5], [6], [1], [2]],
   [[1,2], [3,1], [1,5], [7,1], [5], [3], [4], [3]]).
+
+
+% 7.09 (***) Crossword puzzle.
+% Given an empty (or almost empty) framework of a crossword puzzle and a set of
+% words. The problem is to place the words into the framework.
+
+% The crossword puzzle depicted at:
+% https://sites.google.com/site/prologsite/prolog-problems/7/p99.gif
+% is specified in a text file which first lists the words (one word per line) in
+% an arbitrary order. Then, after an empty line, the crossword framework is
+% defined. In this framework specification, an empty character location is
+% represented by a dot (.). In order to make the solution easier, character
+% locations can also contain predefined character values. The image puzzle is
+% defined in the file p7_09a.dat, other examples are p7_09b.dat and p7_09d.dat.
+% There is also an example of a puzzle (p7_09c.dat) which does not have a
+% solution.
+
+% Words are strings (character lists) of at least two characters. A horizontal
+% or vertical sequence of character places in the crossword puzzle framework is
+% called a site. Our problem is to find a compatible way of placing words onto
+% sites.
+
+% Hints:
+% 1) The problem is not easy. You will need some time to thoroughly understand
+%    it. So, don't give up too early! And remember that the objective is a clean
+%    solution, not just a quick-and-dirty hack!
+% 2) Reading the data file is a tricky problem for which a solution is provided
+%    in the file p7_09-readfile.pl. Use the predicate read_lines/2.
+% 3) For efficiency reasons it is important, at least for larger puzzles, to
+%    sort the words and the sites in a particular order. For this part of the
+%    problem, the solution of 1.28 may be very helpful.
+
+:- ensure_loaded('p7_09-readfile').
