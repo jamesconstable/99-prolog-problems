@@ -185,7 +185,7 @@ identifier_cont([C|Cs]) :- char_type(C, alnum), identifier_cont(Cs).
 
 
 % 7.07 (**) Sudoku.
-% Sudoku puzzles go like this:
+
 %   Problem statement                Solution
 %   .  .  4 | 8  .  . | .  1  7      9  3  4 | 8  2  5 | 6  1  7
 %           |         |                      |         |
@@ -265,3 +265,83 @@ puzzle([
   1,_,_, _,8,_, 3,_,6,
   _,_,_, _,_,6, _,9,1,
   2,4,_, _,_,1, 5,_,_]).
+
+
+% 7.08 (***) Nonograms.
+% Around 1994, a certain kind of puzzles was very popular in England. The
+% "Sunday Telegraph" newspaper wrote: "Nonograms are puzzles from Japan and are
+% currently published each week only in The Sunday Telegraph. Simply use your
+% logic and skill to complete the grid and reveal a picture or diagram." As a
+% Prolog programmer, you are in a better situation: you can have your computer
+% do the work!
+
+% The puzzle goes like this: Essentially, each row and column of a rectangular
+% bitmap is annotated with the respective lengths of its distinct strings of
+% occupied cells. The person who solves the puzzle must complete the bitmap
+% given only these lengths.
+
+%   Problem statement:          Solution:
+%
+%   |_|_|_|_|_|_|_|_| 3         |_|X|X|X|_|_|_|_| 3
+%   |_|_|_|_|_|_|_|_| 2 1       |X|X|_|X|_|_|_|_| 2 1
+%   |_|_|_|_|_|_|_|_| 3 2       |_|X|X|X|_|_|X|X| 3 2
+%   |_|_|_|_|_|_|_|_| 2 2       |_|_|X|X|_|_|X|X| 2 2
+%   |_|_|_|_|_|_|_|_| 6         |_|_|X|X|X|X|X|X| 6
+%   |_|_|_|_|_|_|_|_| 1 5       |X|_|X|X|X|X|X|_| 1 5
+%   |_|_|_|_|_|_|_|_| 6         |X|X|X|X|X|X|_|_| 6
+%   |_|_|_|_|_|_|_|_| 1         |_|_|_|_|X|_|_|_| 1
+%   |_|_|_|_|_|_|_|_| 2         |_|_|_|X|X|_|_|_| 2
+%    1 3 1 7 5 3 4 3             1 3 1 7 5 3 4 3
+%    2 1 5 1                     2 1 5 1
+
+% For the example above, the problem can be stated as the two lists
+% [[3], [2, 1], [3, 2], [2, 2], [6], [1, 5], [6], [1], [2]] and
+% [[1, 2], [3, 1], [1, 5], [7, 1], [5], [3], [4], [3]] which give the "solid"
+% lengths of the rows and columns, top-to-bottom and left-to-right,
+% respectively. Published puzzles are larger than this example, e.g. 25 x 20,
+% and apparently always have unique solutions.
+
+:- table factorial/2.
+:- arithmetic_function(factorial/1).
+factorial(0, 1).
+factorial(N, R) :- N > 0, N1 is N-1, factorial(N1, R1), R is N*R1.
+
+:- arithmetic_function(binomial/2).
+binomial(N, K, R) :- R is factorial(N) / (factorial(K) * factorial(N-K)).
+
+% R is the number of ways of filling a line of LineLength according to the
+% nonogram constraints in Ns (a list of numbers specifying the block lengths).
+% This is based on the identical objects into distinct bins problem, where the
+% objects are the leftover cells (those neither in a block nor the required
+% single-cell separator between blocks) and the bins are the gaps around blocks.
+num_line_options(Ns, LineLength, R) :-
+  sum_list(Ns, S), length(Ns, L), R is binomial(LineLength - S + 1, L).
+
+% R is a way of filling a line of LineLength according to the nonogram
+% constraints in Ns (a list of numbers specifying the block lengths). Generates
+% all options on backtracking. Flow order: (+, +, ?).
+line_options(Ns, LineLength, R) :- line_options(Ns, LineLength, R, []).
+
+line_options([N|[]], Length, R, RHole) :-
+  constraint_options(N, Length, Length1, R, R1),
+  replicate(' ', Length1, R1, RHole).
+line_options([N|Ns], Length, R, RHole) :-
+  min_width(Ns, EndSpace),
+  OptionSpace is Length - EndSpace,
+  constraint_options(N, OptionSpace, Length1, R, [' '|R1]),
+  Length2 is Length1 + EndSpace - 1,
+  line_options(Ns, Length2, R1, RHole).
+
+constraint_options(N, Length, Remaining, R, RHole) :-
+  RightmostStart is Length - N,
+  between(0, RightmostStart, Start),
+  replicate(' ', Start, R, R1),
+  replicate('x', N, R1, RHole),
+  Remaining is Length - (Start + N).
+
+replicate(_, 0, R, R).
+replicate(X, N, R, R1) :-
+  N > 0, R = [X|RH], N1 is N-1, replicate(X, N1, RH, R1).
+
+min_width(Ns, R) :- sum_list(Ns, S), length(Ns, L), R is S+L.
+
