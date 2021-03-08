@@ -253,7 +253,7 @@ write_sudoku(Cells, 9) :- nl, write_sudoku(Cells, 0), !.
 write_sudoku([C-_|Cs], X) :- write(C), tab(1), X1 is X+1, write_sudoku(Cs, X1).
 
 % Sample puzzle
-puzzle([
+sudoku_puzzle([
   _,_,4, 8,_,_, _,1,7,
   6,7,_, 9,_,_, _,_,_,
   5,_,8, _,3,_, _,_,4,
@@ -301,11 +301,11 @@ puzzle([
 % respectively. Published puzzles are larger than this example, e.g. 25 x 20,
 % and apparently always have unique solutions.
 
-nonogram(RowConstraints, ColConstraints, Solution) :-
-  length(RowConstraints, ColLength),
-  length(ColConstraints, RowLength),
-  annotate(RowConstraints, r, RowsAnnotated),
-  annotate(ColConstraints, c, ColsAnnotated),
+nonogram(Rows, Cols, Solution) :-
+  length(Rows, ColLength),
+  length(Cols, RowLength),
+  annotate(Rows, r, RowsAnnotated),
+  annotate(Cols, c, ColsAnnotated),
   sort_by_num_options(RowsAnnotated, RowLength, RowsSorted),
   sort_by_num_options(ColsAnnotated, ColLength, ColsSorted),
   interleave(RowsSorted, ColsSorted, Constraints),
@@ -315,13 +315,6 @@ annotate(Cs, D, CsAnnotated) :-
   length(Cs, L),
   numlist(1, L, Indices),
   maplist({D}/[I, C, A]>>(A = D-I-C), Indices, Cs, CsAnnotated).
-
-sort_by_num_options(Cs, L, CsSorted) :-
-  predsort({L}/[Ord, _-N1-C1, _-N2-C2]>>(
-      num_line_options(C1, L, O1),
-      num_line_options(C2, L, O2),
-      compare(Ord, O1-N1, O2-N2)),
-    Cs, CsSorted).
 
 interleave([], Ys, Ys) :- !.
 interleave(Xs, [], Xs).
@@ -333,6 +326,8 @@ nonogram_solve([D-Fixed-C|Cs], RowLength, ColLength, Solution) :-
   maplist({Solution}/[Y/X-V]>>(memberchk(Y/X-V1, Solution), V=V1), IndexedRow),
   nonogram_solve(Cs, RowLength, ColLength, Solution).
 
+% Indexed is a line satisfying Constraint, with each cell represented in the
+% format Y/X-Value. Generates all options on backtracking.
 indexed_options(r, Fixed, Constraint, Length, _, Indexed) :-
   line_options(Constraint, Length, Line),
   numlist(1, Length, Indices),
@@ -341,6 +336,14 @@ indexed_options(c, Fixed, Constraint, _, Length, Indexed) :-
   line_options(Constraint, Length, Line),
   numlist(1, Length, Indices),
   maplist({Fixed}/[V, I, C]>>(C = I/Fixed-V), Line, Indices, Indexed).
+
+sort_by_num_options(Cs, L, CsSorted) :-
+  predsort(
+    {L}/[Ord, _-N1-C1, _-N2-C2]>>(
+      num_line_options(C1, L, O1),
+      num_line_options(C2, L, O2),
+      compare(Ord, O1-N1, O2-N2)),
+    Cs, CsSorted).
 
 :- table factorial/2.
 :- arithmetic_function(factorial/1).
@@ -380,35 +383,27 @@ constraint_options(N, Length, Remaining, R, RHole) :-
   replicate('x', N, R1, RHole),
   Remaining is Length - (Start + N).
 
+% Appends N copies of X to the difference list R, with new hole R1.
 replicate(_, 0, R, R).
 replicate(X, N, R, R1) :-
   N > 0, R = [X|RH], N1 is N-1, replicate(X, N1, RH, R1).
 
+% R is the minimum number of cells needed to accommodate the constraints in Ns.
 min_width(Ns, R) :- sum_list(Ns, S), length(Ns, L), R is S+L.
 
-specimen_nonogram(
+% Outputs the completed nonogram solution in a grid.
+write_nonogram(N) :-
+  sort(N, NSorted),
+  NSorted = [Y0/_-_|_],
+  foldl(
+    [Y/_-V, LastY, Y]>>(
+      (Y \= LastY -> nl; true),
+      write(V),
+      tab(1)),
+    NSorted, Y0, _),
+  nl.
+
+nonogram_puzzle(
   'Hen',
   [[3], [2,1], [3,2], [2,2], [6], [1,5], [6], [1], [2]],
   [[1,2], [3,1], [1,5], [7,1], [5], [3], [4], [3]]).
-
-specimen_nonogram(
-  'Jack & The Beanstalk',
-  [[3,1], [2,4,1], [1,3,3], [2,4], [3,3,1,3], [3,2,2,1,3],
-    [2,2,2,2,2], [2,1,1,2,1,1], [1,2,1,4], [1,1,2,2], [2,2,8],
-    [2,2,2,4], [1,2,2,1,1,1], [3,3,5,1], [1,1,3,1,1,2],
-    [2,3,1,3,3], [1,3,2,8], [4,3,8], [1,4,2,5], [1,4,2,2],
-    [4,2,5], [5,3,5], [4,1,1], [4,2], [3,3]],
-  [[2,3], [3,1,3], [3,2,1,2], [2,4,4], [3,4,2,4,5], [2,5,2,4,6],
-    [1,4,3,4,6,1], [4,3,3,6,2], [4,2,3,6,3], [1,2,4,2,1], [2,2,6],
-    [1,1,6], [2,1,4,2], [4,2,6], [1,1,1,1,4], [2,4,7], [3,5,6],
-    [3,2,4,2], [2,2,2], [6,3]]).
-
-specimen_nonogram(
-  'WATER BUFFALO',
-  [[5], [2,3,2], [2,5,1], [2,8], [2,5,11], [1,1,2,1,6], [1,2,1,3],
-    [2,1,1], [2,6,2], [15,4], [10,8], [2,1,4,3,6], [17], [17],
-    [18], [1,14], [1,1,14], [5,9], [8], [7]],
-  [[5], [3,2], [2,1,2], [1,1,1], [1,1,1], [1,3], [2,2], [1,3,3],
-    [1,3,3,1], [1,7,2], [1,9,1], [1,10], [1,10], [1,3,5], [1,8],
-    [2,1,6], [3,1,7], [4,1,7], [6,1,8], [6,10], [7,10], [1,4,11],
-    [1,2,11], [2,12], [3,13]]).
