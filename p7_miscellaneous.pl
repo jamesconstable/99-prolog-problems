@@ -302,23 +302,17 @@ sudoku_puzzle([
 % and apparently always have unique solutions.
 
 nonogram(Rows, Cols, Solution) :-
-  length(Rows, ColLength),
-  length(Cols, RowLength),
-  annotate(Rows, r, RowsAnnotated),
-  annotate(Cols, c, ColsAnnotated),
+  annotate(Rows, r, RowsAnnotated, ColLength),
+  annotate(Cols, c, ColsAnnotated, RowLength),
   sort_by_num_options(RowsAnnotated, RowLength, RowsSorted),
   sort_by_num_options(ColsAnnotated, ColLength, ColsSorted),
   interleave(RowsSorted, ColsSorted, Constraints),
   nonogram_solve(Constraints, RowLength, ColLength, Solution).
 
-annotate(Cs, D, CsAnnotated) :- 
+annotate(Cs, D, CsAnnotated, L) :-
   length(Cs, L),
   numlist(1, L, Indices),
   maplist({D}/[I, C, A]>>(A = D-I-C), Indices, Cs, CsAnnotated).
-
-interleave([], Ys, Ys) :- !.
-interleave(Xs, [], Xs).
-interleave([X|Xs], [Y|Ys], [X,Y|T]) :- interleave(Xs, Ys, T).
 
 nonogram_solve([], _, _, Solution) :- close_dl(Solution).
 nonogram_solve([D-Fixed-C|Cs], RowLength, ColLength, Solution) :-
@@ -337,6 +331,8 @@ indexed_options(c, Fixed, Constraint, _, Length, Indexed) :-
   numlist(1, Length, Indices),
   maplist({Fixed}/[V, I, C]>>(C = I/Fixed-V), Line, Indices, Indexed).
 
+% CsSorted is the list of constraints, Cs, sorted according to how many options
+% they generate when applied to a line of length L.
 sort_by_num_options(Cs, L, CsSorted) :-
   predsort(
     {L}/[Ord, _-N1-C1, _-N2-C2]>>(
@@ -391,6 +387,13 @@ replicate(X, N, R, R1) :-
 % R is the minimum number of cells needed to accommodate the constraints in Ns.
 min_width(Ns, R) :- sum_list(Ns, S), length(Ns, L), R is S+L.
 
+% Zs is the interleaving of Xs and Ys. Flow order: (Xs, Ys, Zs).
+% If one list is shorter, the remaining elements of the other are all placed at
+% the end.
+interleave([], Ys, Ys) :- !.
+interleave(Xs, [], Xs).
+interleave([X|Xs], [Y|Ys], [X,Y|T]) :- interleave(Xs, Ys, T).
+
 % Outputs the completed nonogram solution in a grid.
 write_nonogram(N) :-
   sort(N, NSorted),
@@ -403,6 +406,7 @@ write_nonogram(N) :-
     NSorted, Y0, _),
   nl.
 
+% Sample puzzle
 nonogram_puzzle(
   'Hen',
   [[3], [2,1], [3,2], [2,2], [6], [1,5], [6], [1], [2]],
