@@ -1,3 +1,4 @@
+:- use_module(library(readutil)).
 :- ensure_loaded(p6_graphs).
 
 % 7.01 (**) Eight queens problem.
@@ -443,4 +444,8 @@ nonogram_puzzle(
 %    sort the words and the sites in a particular order. For this part of the
 %    problem, the solution of 1.28 may be very helpful.
 
-:- ensure_loaded('p7_09-readfile').
+% Simplified version of provided file-reading predicate using built-ins.
+read_lines(File, Lines) :-
+  read_file_to_string(File, CharList, []),
+  split_string(CharList, "\n", "", StringLines),
+  maplist(string_chars, StringLines, Lines).
