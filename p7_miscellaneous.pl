@@ -444,6 +444,25 @@ nonogram_puzzle(
 %    sort the words and the sites in a particular order. For this part of the
 %    problem, the solution of 1.28 may be very helpful.
 
+solve_crossword(File, Framework) :-
+  read_lines(File, Lines),
+  words_framework(Lines, Words, FrameworkRaw),
+  prepare_framework(FrameworkRaw, Framework),
+
+  % Group words by length. Descending order ensures that the longest words
+  % (i.e. those most likely to cause conflicts) are handled first.
+  group_by_length(Words, WordsReverse),
+  reverse(WordsReverse, WordsByLength),
+
+  % Extract all slots and group by their lengths.
+  across_slots(Framework, Across),
+  down_slots(Framework, Down),
+  append(Across, Down, Slots),
+  group_by_length(Slots, SlotsByLength),
+
+  % Try all permutations of words into suitably-sized slots.
+  words_slots_allocation(WordsByLength, SlotsByLength).
+
 % Simplified version of provided file-reading predicate using built-ins.
 read_lines(File, Lines) :-
   read_file_to_string(File, CharList, []),
@@ -455,7 +474,7 @@ words_framework(Lines, Words, Framework) :-
 
 %% prepare_framework(+Lines, -Prepared) is det
 %  Expands a crossword framework so that all lines are the same length and
-%  blanks are replaced by v(X) variable terms.
+%  blanks are replaced by unbound variables.
 prepare_framework(Lines, Prepared) :-
   maplist(deblank_line, Lines, Deblanked),
   maplist(length, Deblanked, Lengths),
@@ -463,7 +482,7 @@ prepare_framework(Lines, Prepared) :-
   maplist({Max}/[L, L1]>>pad_right(Max, ' ', L, L1), Deblanked, Prepared).
 
 deblank_line(Line, Deblanked) :-
-  maplist([L, D]>>(L = '.' -> D = v(_); D = L), Line, Deblanked).
+  maplist([L, D]>>(L = '.' -> D = _; D = L), Line, Deblanked).
 
 %% pad_right(+Length, +Pad, +List, -Padded) is det
 %  Pads a list to the specified length using the given pad element. If the input
@@ -491,18 +510,54 @@ down_slots(Framework, Slots) :-
 %  Extract crossword slots from the given list. Slots are made up of v(X) terms
 %  and non-space chars, and separated by any number of spaces.
 extract_slots([], []).
-extract_slots([s(R)], [S]) :- !, reverse(R, S).
-extract_slots([s(R), ' '|Xs], [S|Ss]) :-
-  !, reverse(R, S), extract_slots(Xs, Ss).
-extract_slots([s(S), X|Xs], Ss) :-
-  X \= ' ', !, extract_slots([s([X|S])|Xs], Ss).
-extract_slots([' '|Xs], Ss) :-
-  !, extract_slots(Xs, Ss).
+extract_slots([Current], [S]) :-
+  nonvar(Current), Current = s(R), !,
+  reverse(R, S).
+extract_slots([Current, Space|Xs], [S|Ss]) :-
+  nonvar(Current), Current = s(R),
+  nonvar(Space), Space = ' ', !,
+  reverse(R, S), extract_slots(Xs, Ss).
+extract_slots([Current, X|Xs], Ss) :-
+  nonvar(Current), Current = s(R),
+  (var(X); X \= ' '), !,
+  extract_slots([s([X|R])|Xs], Ss).
+extract_slots([Space|Xs], Ss) :-
+  nonvar(Space), Space = ' ', !,
+  extract_slots(Xs, Ss).
 extract_slots([X|Xs], Ss) :-
-  X \= ' ', X \= s(_), extract_slots([s([X])|Xs], Ss).
+  (var(X); X \= ' ', X \= s(_)), !,
+  extract_slots([s([X])|Xs], Ss).
 
 %% transpose(?List, ?Transposed) is det
 %  Transpose a list of lists of the same length.
 transpose(Rows, []) :- maplist(=([]), Rows), !.
 transpose(Rows, [Col|Cols]) :-
   maplist([[X|Xs], X, Xs]>>true, Rows, Col, Rows1), transpose(Rows1, Cols).
+
+%% group_by_length(+Lists, -Groups) is det
+%  Groups a list of lists by their lengths into length-group pairs.
+
+%  ?- group_by_length([[a], [a, b, c], [d, e], [f]], G).
+%  G = [1-[[a], [f]], 2-[[d, e]], 3-[[a, b, c]]].
+group_by_length(Lists, Groups) :-
+  map_list_to_pairs(length, Lists, KeyedByLength),
+  keysort(KeyedByLength, SortedByLength),
+  key_pack(SortedByLength, Groups), !.
+
+key_pack([], []).
+key_pack([K-V], [K-[V]]).
+key_pack([K-V|Ps], [K-[V|Vs]|T]) :- key_pack(Ps, [K-Vs|T]).
+key_pack([K1-V|Ps], [K1-[V],K2-Vs|T]) :- key_pack(Ps, [K2-Vs|T]), K1 \= K2.
+
+%% words_slots_allocation(+Words, !Slots) is multi
+%  Words is a list of words grouped by their length, and Slots is a list of
+%  unbound or partially-bound slots with some shared variables between them. On
+%  success, all variables in Slots will be given a valid binding from Words.
+words_slots_allocation([], []).
+words_slots_allocation([_-[]|Ws], Ss) :- !, words_slots_allocation(Ws, Ss).
+words_slots_allocation(Ws, [_-[]|Ss]) :- !, words_slots_allocation(Ws, Ss).
+words_slots_allocation([L-[Word|Words]|WordGroups], SlotGroups) :-
+  ord_selectchk(L-Slots, SlotGroups, SlotGroups1),
+  select(Word, Slots, Slots1),
+  ord_union([L-Slots1], SlotGroups1, SlotGroups2),
+  words_slots_allocation([L-Words|WordGroups], SlotGroups2).
