@@ -444,10 +444,19 @@ nonogram_puzzle(
 %    sort the words and the sites in a particular order. For this part of the
 %    problem, the solution of 1.28 may be very helpful.
 
-solve_crossword(File, Framework) :-
+%% solve_crossword(+File, -Framework) is multi
+%  File is a path to a crossword specification (several are found in the inputs
+%  directory) and Crossword is the completed puzzle. Multiple solutions may be
+%  found on backtracking.
+
+%  This solution runs about as fast the example solution, but could probably be
+%  made substantially faster by constructing a graph of slot overlaps and then
+%  building outward from one point, rather than jumping all over the place. That
+%  would require fairly substantial re-engineering of this solution though...
+solve_crossword(File, Crossword) :-
   read_lines(File, Lines),
   words_framework(Lines, Words, FrameworkRaw),
-  prepare_framework(FrameworkRaw, Framework),
+  prepare_framework(FrameworkRaw, Crossword),
 
   % Group words by length. Descending order ensures that the longest words
   % (i.e. those most likely to cause conflicts) are handled first.
@@ -455,8 +464,8 @@ solve_crossword(File, Framework) :-
   reverse(WordsReverse, WordsByLength),
 
   % Extract all slots and group by their lengths.
-  across_slots(Framework, Across),
-  down_slots(Framework, Down),
+  across_slots(Crossword, Across),
+  down_slots(Crossword, Down),
   append(Across, Down, Slots),
   group_by_length(Slots, SlotsByLength),
 
@@ -507,26 +516,24 @@ down_slots(Framework, Slots) :-
   transpose(Framework, Cols), across_slots(Cols, Slots).
 
 %% extract_slots(+List, -Slots) is det
-%  Extract crossword slots from the given list. Slots are made up of v(X) terms
-%  and non-space chars, and separated by any number of spaces.
+%  Extract crossword slots from the given list. Slots are made up of unbound
+%  variables and non-space chars, and separated by any number of spaces.
 extract_slots([], []).
 extract_slots([Current], [S]) :-
-  nonvar(Current), Current = s(R), !,
-  reverse(R, S).
+  slot_contents(Current, R), !, reverse(R, S).
 extract_slots([Current, Space|Xs], [S|Ss]) :-
-  nonvar(Current), Current = s(R),
-  nonvar(Space), Space = ' ', !,
+  slot_contents(Current, R), is_space(Space), !,
   reverse(R, S), extract_slots(Xs, Ss).
 extract_slots([Current, X|Xs], Ss) :-
-  nonvar(Current), Current = s(R),
-  (var(X); X \= ' '), !,
+  slot_contents(Current, R), (var(X); X \= ' '), !,
   extract_slots([s([X|R])|Xs], Ss).
 extract_slots([Space|Xs], Ss) :-
-  nonvar(Space), Space = ' ', !,
-  extract_slots(Xs, Ss).
+  is_space(Space), !, extract_slots(Xs, Ss).
 extract_slots([X|Xs], Ss) :-
-  (var(X); X \= ' ', X \= s(_)), !,
-  extract_slots([s([X])|Xs], Ss).
+  (var(X); X \= ' ', X \= s(_)), !, extract_slots([s([X])|Xs], Ss).
+
+is_space(S) :- nonvar(S), S = ' '.
+slot_contents(Slot, Contents) :- nonvar(Slot), Slot = s(Contents).
 
 %% transpose(?List, ?Transposed) is det
 %  Transpose a list of lists of the same length.
