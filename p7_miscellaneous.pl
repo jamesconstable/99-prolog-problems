@@ -449,3 +449,60 @@ read_lines(File, Lines) :-
   read_file_to_string(File, CharList, []),
   split_string(CharList, "\n", "", StringLines),
   maplist(string_chars, StringLines, Lines).
+
+words_framework(Lines, Words, Framework) :-
+  append(Words, [[]|Framework], Lines).
+
+%% prepare_framework(+Lines, -Prepared) is det
+%  Expands a crossword framework so that all lines are the same length and
+%  blanks are replaced by v(X) variable terms.
+prepare_framework(Lines, Prepared) :-
+  maplist(deblank_line, Lines, Deblanked),
+  maplist(length, Deblanked, Lengths),
+  max_list(Lengths, Max),
+  maplist({Max}/[L, L1]>>pad_right(Max, ' ', L, L1), Deblanked, Prepared).
+
+deblank_line(Line, Deblanked) :-
+  maplist([L, D]>>(L = '.' -> D = v(_); D = L), Line, Deblanked).
+
+%% pad_right(+Length, +Pad, +List, -Padded) is det
+%  Pads a list to the specified length using the given pad element. If the input
+%  list is longer than the specified length, it is returned unchanged.
+pad_right(0, _, L, L) :- !.
+pad_right(N, Pad, [], [Pad|Padded]) :-
+  N > 0, !, N1 is N-1, pad_right(N1, Pad, [], Padded).
+pad_right(N, Pad, [X|Xs], [X|Padded]) :-
+  N > 0, N1 is N-1, pad_right(N1, Pad, Xs, Padded).
+
+%% across_slots(+Framework, -Slots) is det
+%  Extracts the horizontal slots from the crossword framework.
+across_slots(Framework, Slots) :-
+  foldl(
+    [Line, S, S1]>>(extract_slots(Line, LineSlots), append(S, LineSlots, S1)),
+    Framework, [], AllSlots),
+    exclude([S]>>length(S, 1), AllSlots, Slots).
+
+%% down_slots(+Framework, -Slots) is det
+%  Extracts the vertical slots from the crossword framework.
+down_slots(Framework, Slots) :-
+  transpose(Framework, Cols), across_slots(Cols, Slots).
+
+%% extract_slots(+List, -Slots) is det
+%  Extract crossword slots from the given list. Slots are made up of v(X) terms
+%  and non-space chars, and separated by any number of spaces.
+extract_slots([], []).
+extract_slots([s(R)], [S]) :- !, reverse(R, S).
+extract_slots([s(R), ' '|Xs], [S|Ss]) :-
+  !, reverse(R, S), extract_slots(Xs, Ss).
+extract_slots([s(S), X|Xs], Ss) :-
+  X \= ' ', !, extract_slots([s([X|S])|Xs], Ss).
+extract_slots([' '|Xs], Ss) :-
+  !, extract_slots(Xs, Ss).
+extract_slots([X|Xs], Ss) :-
+  X \= ' ', X \= s(_), extract_slots([s([X])|Xs], Ss).
+
+%% transpose(?List, ?Transposed) is det
+%  Transpose a list of lists of the same length.
+transpose(Rows, []) :- maplist(=([]), Rows), !.
+transpose(Rows, [Col|Cols]) :-
+  maplist([[X|Xs], X, Xs]>>true, Rows, Col, Rows1), transpose(Rows1, Cols).
